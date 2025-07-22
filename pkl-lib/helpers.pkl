@@ -1,0 +1,280 @@
+module helpers
+
+import "karabiner.pkl"
+
+class Keys {
+  static a = "a"
+  static b = "b"
+  static c = "c"
+  static d = "d"
+  static e = "e"
+  static f = "f"
+  static g = "g"
+  static h = "h"
+  static i = "i"
+  static j = "j"
+  static k = "k"
+  static l = "l"
+  static m = "m"
+  static n = "n"
+  static o = "o"
+  static p = "p"
+  static q = "q"
+  static r = "r"
+  static s = "s"
+  static t = "t"
+  static u = "u"
+  static v = "v"
+  static w = "w"
+  static x = "x"
+  static y = "y"
+  static z = "z"
+  
+  static num0 = "0"
+  static num1 = "1"
+  static num2 = "2"
+  static num3 = "3"
+  static num4 = "4"
+  static num5 = "5"
+  static num6 = "6"
+  static num7 = "7"
+  static num8 = "8"
+  static num9 = "9"
+  
+  static escape = "escape"
+  static return_or_enter = "return_or_enter"
+  static tab = "tab"
+  static spacebar = "spacebar"
+  static hyphen = "hyphen"
+  static equal_sign = "equal_sign"
+  static open_bracket = "open_bracket"
+  static close_bracket = "close_bracket"
+  static backslash = "backslash"
+  static semicolon = "semicolon"
+  static quote = "quote"
+  static grave_accent_and_tilde = "grave_accent_and_tilde"
+  static comma = "comma"
+  static period = "period"
+  static slash = "slash"
+  static caps_lock = "caps_lock"
+  static delete_or_backspace = "delete_or_backspace"
+  static delete_forward = "delete_forward"
+  
+  static up_arrow = "up_arrow"
+  static down_arrow = "down_arrow"
+  static left_arrow = "left_arrow"
+  static right_arrow = "right_arrow"
+  
+  static page_up = "page_up"
+  static page_down = "page_down"
+  static home = "home"
+  static end = "end"
+  
+  static f1 = "f1"
+  static f2 = "f2"
+  static f3 = "f3"
+  static f4 = "f4"
+  static f5 = "f5"
+  static f6 = "f6"
+  static f7 = "f7"
+  static f8 = "f8"
+  static f9 = "f9"
+  static f10 = "f10"
+  static f11 = "f11"
+  static f12 = "f12"
+}
+
+function remap(from: String, to: String): karabiner.SimpleModification = new {
+  from = from
+  to = to
+}
+
+function basic(
+  from: String, 
+  to: String,
+  modifiers: List<String>? = null
+): karabiner.Manipulator = new {
+  type = "basic"
+  from = new karabiner.FromEvent {
+    key_code = from
+    modifiers = if (modifiers != null) new karabiner.Modifiers {
+      mandatory = modifiers
+    } else null
+  }
+  to = List {
+    new karabiner.ToEvent {
+      key_code = to
+    }
+  }
+}
+
+function capsLockToEscapeControl(): karabiner.Rule = new {
+  description = "Caps Lock to Escape (alone) or Control (with other keys)"
+  manipulators = List {
+    new karabiner.Manipulator {
+      type = "basic"
+      from = new karabiner.FromEvent {
+        key_code = "caps_lock"
+      }
+      to = List {
+        new karabiner.ToEvent {
+          key_code = "left_control"
+        }
+      }
+      to_if_alone = List {
+        new karabiner.ToEvent {
+          key_code = "escape"
+        }
+      }
+    }
+  }
+}
+
+function layer(
+  trigger: String,
+  mappings: Mapping<String, String | karabiner.ToEvent>,
+  threshold: Int = 200
+): karabiner.Rule = new {
+  description = "Layer triggered by \(trigger)"
+  manipulators = mappings.toList().map((entry) -> 
+    new karabiner.Manipulator {
+      type = "basic"
+      from = new karabiner.FromEvent {
+        key_code = entry.first
+        modifiers = new karabiner.Modifiers {
+          mandatory = List { trigger }
+        }
+      }
+      to = if (entry.second is String) List {
+        new karabiner.ToEvent {
+          key_code = entry.second as String
+        }
+      } else List { entry.second as karabiner.ToEvent }
+      parameters = new karabiner.ManipulatorParameters {
+        "basic.simultaneous_threshold_milliseconds" = threshold
+      }
+    }
+  )
+}
+
+function vimNavigation(modifierKey: String = "left_control"): karabiner.Rule = 
+  layer(modifierKey, new Mapping {
+    ["h"] = Keys.left_arrow
+    ["j"] = Keys.down_arrow
+    ["k"] = Keys.up_arrow
+    ["l"] = Keys.right_arrow
+    ["0"] = Keys.home
+    ["4"] = Keys.end
+    ["g"] = Keys.page_up
+    ["G"] = Keys.page_down
+    ["d"] = Keys.delete_forward
+    ["x"] = Keys.delete_or_backspace
+  })
+
+function appSwitcher(
+  trigger: String,
+  apps: Mapping<String, String>
+): karabiner.Rule = new {
+  description = "App switcher with \(trigger)"
+  manipulators = apps.toList().map((entry) ->
+    new karabiner.Manipulator {
+      type = "basic"
+      from = new karabiner.FromEvent {
+        key_code = entry.first
+        modifiers = new karabiner.Modifiers {
+          mandatory = List { trigger }
+        }
+      }
+      to = List {
+        new karabiner.ToEvent {
+          shell_command = "open -a '\(entry.second)'"
+        }
+      }
+    }
+  )
+}
+
+function shiftLayer(trigger: String): karabiner.Rule = new {
+  description = "\(trigger) as shift layer"
+  manipulators = List {
+      ...["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m",
+        "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"].map((letter) ->
+      new karabiner.Manipulator {
+        type = "basic"
+        from = new karabiner.FromEvent {
+          simultaneous = List {
+            new { key_code = trigger }
+            new { key_code = letter }
+          }
+          simultaneous_options = new karabiner.SimultaneousOptions {
+            key_down_order = "strict"
+            key_up_order = "strict_inverse"
+            to_after_key_up = List {
+              new karabiner.ToEvent { key_code = trigger }
+            }
+          }
+        }
+        to = List {
+          new karabiner.ToEvent {
+            key_code = letter
+            modifiers = List { "left_shift" }
+          }
+        }
+      }
+    )
+    
+    new karabiner.Manipulator {
+      type = "basic"
+      from = new karabiner.FromEvent {
+        simultaneous = List {
+          new { key_code = trigger }
+          new { key_code = "1" }
+        }
+      }
+      to = List {
+        new karabiner.ToEvent {
+          key_code = "1"
+          modifiers = List { "left_shift" }
+        }
+      }
+    }
+  }
+}
+
+function hyperKey(trigger: String): karabiner.Rule = new {
+  description = "\(trigger) to Hyper Key"
+  manipulators = List {
+    new karabiner.Manipulator {
+      type = "basic"
+      from = new karabiner.FromEvent {
+        key_code = trigger
+      }
+      to = List {
+        new karabiner.ToEvent {
+          key_code = trigger
+          modifiers = List {
+            "left_command"
+            "left_control"
+            "left_option"
+            "left_shift"
+          }
+        }
+      }
+    }
+  }
+}
+
+function launchApp(key: String, app: String, modifiers: List<String>? = null): karabiner.Manipulator = new {
+  type = "basic"
+  from = new karabiner.FromEvent {
+    key_code = key
+    modifiers = if (modifiers != null) new karabiner.Modifiers {
+      mandatory = modifiers
+    } else null
+  }
+  to = List {
+    new karabiner.ToEvent {
+      shell_command = "open -a '\(app)'"
+    }
+  }
+}
