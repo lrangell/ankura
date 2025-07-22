@@ -1,0 +1,33 @@
+module simlayers_test
+
+import "karabiner.pkl" as karabiner
+import "helpers.pkl" as helpers
+
+// Test simultaneous key layers (d-mode, f-mode)
+simpleConfig: karabiner.SimpleConfig = new {
+  complex_modifications = new karabiner.ComplexModifications {
+    parameters = new karabiner.ComplexModificationParameters {
+      `basic.simultaneous_threshold_milliseconds` = 200
+    }
+    
+    rules = List(
+      // D-mode for yabai window management
+      helpers.layer("d", new Mapping {
+        ["h"] = helpers.Keys.left_arrow
+        ["j"] = helpers.Keys.down_arrow
+        ["k"] = helpers.Keys.up_arrow
+        ["l"] = helpers.Keys.right_arrow
+      }),
+      
+      // F-mode for navigation
+      helpers.layer("f", new Mapping {
+        ["h"] = helpers.Keys.left_arrow
+        ["j"] = helpers.Keys.down_arrow
+        ["k"] = helpers.Keys.up_arrow
+        ["l"] = helpers.Keys.right_arrow
+      })
+    )
+  }
+}
+
+config: karabiner.Config = simpleConfig.toConfig()

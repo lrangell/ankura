@@ -101,33 +101,33 @@ function basic(
       mandatory = modifiers
     } else null
   }
-  to = List {
+  to = List(
     new karabiner.ToEvent {
       key_code = to
     }
-  }
+  )
 }
 
 function capsLockToEscapeControl(): karabiner.Rule = new {
-  description = "Caps Lock to Escape (alone) or Control (with other keys)"
-  manipulators = List {
+  description = "Caps Lock to Escape when alone, Control when held"
+  manipulators = List(
     new karabiner.Manipulator {
       type = "basic"
       from = new karabiner.FromEvent {
         key_code = "caps_lock"
       }
-      to = List {
+      to = List(
         new karabiner.ToEvent {
-          key_code = "left_control"
+          key_code = "right_control"
         }
-      }
-      to_if_alone = List {
+      )
+      to_if_alone = List(
         new karabiner.ToEvent {
           key_code = "escape"
         }
-      }
+      )
     }
-  }
+  )
 }
 
 function layer(
@@ -135,23 +135,23 @@ function layer(
   mappings: Mapping<String, String | karabiner.ToEvent>,
   threshold: Int = 200
 ): karabiner.Rule = new {
-  description = "Layer triggered by \(trigger)"
+  description = "Layer: \(trigger) + key"
   manipulators = mappings.toList().map((entry) -> 
     new karabiner.Manipulator {
       type = "basic"
       from = new karabiner.FromEvent {
         key_code = entry.first
         modifiers = new karabiner.Modifiers {
-          mandatory = List { trigger }
+          mandatory = List(trigger)
         }
       }
-      to = if (entry.second is String) List {
+      to = if (entry.second is String) List(
         new karabiner.ToEvent {
           key_code = entry.second as String
         }
-      } else List { entry.second as karabiner.ToEvent }
+      ) else List(entry.second as karabiner.ToEvent)
       parameters = new karabiner.ManipulatorParameters {
-        "basic.simultaneous_threshold_milliseconds" = threshold
+        `basic.simultaneous_threshold_milliseconds` = threshold
       }
     }
   )
@@ -175,93 +175,95 @@ function appSwitcher(
   trigger: String,
   apps: Mapping<String, String>
 ): karabiner.Rule = new {
-  description = "App switcher with \(trigger)"
+  description = "App Switcher: \(trigger) + key"
   manipulators = apps.toList().map((entry) ->
     new karabiner.Manipulator {
       type = "basic"
       from = new karabiner.FromEvent {
         key_code = entry.first
         modifiers = new karabiner.Modifiers {
-          mandatory = List { trigger }
+          mandatory = List(trigger)
         }
       }
-      to = List {
+      to = List(
         new karabiner.ToEvent {
           shell_command = "open -a '\(entry.second)'"
         }
-      }
+      )
     }
   )
 }
 
 function shiftLayer(trigger: String): karabiner.Rule = new {
-  description = "\(trigger) as shift layer"
-  manipulators = List {
-      ...["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m",
-        "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"].map((letter) ->
+  description = "Shift Layer: \(trigger) + key"
+  manipulators = List(
+    ...["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m",
+       "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"].map((letter) ->
       new karabiner.Manipulator {
         type = "basic"
         from = new karabiner.FromEvent {
-          simultaneous = List {
-            new { key_code = trigger }
+          simultaneous = List(
+            new { key_code = trigger },
             new { key_code = letter }
-          }
+          )
           simultaneous_options = new karabiner.SimultaneousOptions {
             key_down_order = "strict"
             key_up_order = "strict_inverse"
-            to_after_key_up = List {
+            to_after_key_up = List(
               new karabiner.ToEvent { key_code = trigger }
-            }
+            )
           }
         }
-        to = List {
+        to = List(
           new karabiner.ToEvent {
             key_code = letter
-            modifiers = List { "left_shift" }
+            modifiers = List("left_shift")
           }
+        )
+      }
+    ),
+    
+    ...["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"].map((num) ->
+      new karabiner.Manipulator {
+        type = "basic"
+        from = new karabiner.FromEvent {
+          simultaneous = List(
+            new { key_code = trigger }
+            new { key_code = num }
+          )
         }
+        to = List(
+          new karabiner.ToEvent {
+            key_code = num
+            modifiers = List("left_shift")
+          }
+        )
       }
     )
-    
-    new karabiner.Manipulator {
-      type = "basic"
-      from = new karabiner.FromEvent {
-        simultaneous = List {
-          new { key_code = trigger }
-          new { key_code = "1" }
-        }
-      }
-      to = List {
-        new karabiner.ToEvent {
-          key_code = "1"
-          modifiers = List { "left_shift" }
-        }
-      }
-    }
-  }
+  )
 }
 
 function hyperKey(trigger: String): karabiner.Rule = new {
-  description = "\(trigger) to Hyper Key"
-  manipulators = List {
+  description = "Hyper Key: \(trigger)"
+  manipulators = List(
     new karabiner.Manipulator {
       type = "basic"
       from = new karabiner.FromEvent {
         key_code = trigger
       }
-      to = List {
+      to = List(
         new karabiner.ToEvent {
           key_code = trigger
-          modifiers = List {
-            "left_command"
-            "left_control"
-            "left_option"
+          modifiers = List(
+            "left_command",
+            "left_control",
+            "left_option",
             "left_shift"
-          }
+          )
         }
-      }
+      )
     }
-  }
+  )
 }
 
 function launchApp(key: String, app: String, modifiers: List<String>? = null): karabiner.Manipulator = new {
@@ -272,9 +274,9 @@ function launchApp(key: String, app: String, modifiers: List<String>? = null): k
       mandatory = modifiers
     } else null
   }
-  to = List {
+  to = List(
     new karabiner.ToEvent {
       shell_command = "open -a '\(app)'"
     }
-  }
+  )
 }

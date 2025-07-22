@@ -1,0 +1,15 @@
+module caps_lock_test
+
+import "karabiner.pkl" as karabiner
+import "helpers.pkl" as helpers
+
+// Test caps lock to escape when alone, control when held
+simpleConfig: karabiner.SimpleConfig = new {
+  complex_modifications = new karabiner.ComplexModifications {
+    rules = List(
+      helpers.capsLockToEscapeControl()
+    )
+  }
+}
+
+config: karabiner.Config = simpleConfig.toConfig()

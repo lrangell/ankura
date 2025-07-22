@@ -1,0 +1,7 @@
+[alias]
+# Use cargo-nextest for running tests
+test-nextest = "nextest run"
+test-all = "nextest run --all-features"
+
+# For CI/CD
+ci-test = "nextest run --profile ci"

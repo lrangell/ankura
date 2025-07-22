@@ -1,0 +1,216 @@
+module karabiner
+
+class Config {
+  title: String = "Karabiner-Pkl Configuration"
+  profiles: List<Profile> = List(
+    new Profile {
+      name = "Default"
+      selected = true
+    }
+  )
+  global: Global?
+}
+
+class Global {
+  check_for_updates_on_startup: Boolean = true
+  show_in_menu_bar: Boolean = true
+  show_profile_name_in_menu_bar: Boolean = false
+}
+
+class Profile {
+  name: String
+  selected: Boolean = false
+  virtual_hid_keyboard: VirtualHidKeyboard?
+  devices: List<Device> = List()
+  fn_function_keys: List<FnFunctionKey> = List()
+  simple_modifications: List<SimpleModification> = List()
+  complex_modifications: ComplexModifications?
+  parameters: Parameters?
+}
+
+class VirtualHidKeyboard {
+  country_code: Int = 0
+  indicate_sticky_modifier_keys_state: Boolean = true
+  mouse_key_xy_scale: Int = 100
+}
+
+class Device {
+  identifiers: DeviceIdentifiers
+  ignore: Boolean = false
+  disable_built_in_keyboard_if_exists: Boolean = false
+  fn_function_keys: List<FnFunctionKey> = List()
+  simple_modifications: List<SimpleModification> = List()
+  manipulate_caps_lock_led: Boolean = false
+}
+
+class DeviceIdentifiers {
+  vendor_id: Int
+  product_id: Int
+  is_keyboard: Boolean = true
+  is_pointing_device: Boolean = false
+}
+
+class FnFunctionKey {
+  from: KeyCode
+  to: List<ToEvent>
+}
+
+class SimpleModification {
+  from: KeyCode
+  to: KeyCode
+}
+
+class ComplexModifications {
+  parameters: ComplexModificationParameters?
+  rules: List<Rule>
+}
+
+class ComplexModificationParameters {
+  `basic.simultaneous_threshold_milliseconds`: Int = 50
+  `basic.to_delayed_action_delay_milliseconds`: Int = 500
+  `basic.to_if_alone_timeout_milliseconds`: Int = 1000
+  `basic.to_if_held_down_threshold_milliseconds`: Int = 500
+}
+
+class Rule {
+  description: String
+  manipulators: List<Manipulator>
+}
+
+class Manipulator {
+  type: ManipulatorType = "basic"
+  from: FromEvent
+  to: List<ToEvent>?
+  to_if_alone: List<ToEvent>?
+  to_after_key_up: List<ToEvent>?
+  to_delayed_action: DelayedAction?
+  conditions: List<Condition>?
+  parameters: ManipulatorParameters?
+}
+
+typealias ManipulatorType = "basic" | "mouse_motion_to_scroll"
+
+class FromEvent {
+  key_code: KeyCode?
+  consumer_key_code: ConsumerKeyCode?
+  pointing_button: PointingButton?
+  any: "key_code" | "consumer_key_code" | "pointing_button"?
+  modifiers: Modifiers?
+  simultaneous: List<FromEvent>?
+  simultaneous_options: SimultaneousOptions?
+}
+
+class ToEvent {
+  key_code: KeyCode?
+  consumer_key_code: ConsumerKeyCode?
+  pointing_button: PointingButton?
+  shell_command: String?
+  select_input_source: InputSource?
+  set_variable: SetVariable?
+  mouse_key: MouseKey?
+  sticky_modifier: StickyModifier?
+  modifiers: List<Modifier>?
+  lazy: Boolean?
+  repeat: Boolean?
+  halt: Boolean?
+  hold_down_milliseconds: Int?
+}
+
+class DelayedAction {
+  to_if_invoked: List<ToEvent>
+  to_if_canceled: List<ToEvent>
+}
+
+class Condition {
+  type: ConditionType
+  bundle_identifiers: List<String>?
+  file_paths: List<String>?
+  input_source_id: String?
+  input_source_language: String?
+  keyboard_types: List<KeyboardType>?
+  name: String?
+  value: Int | String | Boolean?
+}
+
+typealias ConditionType = "frontmost_application_if" | "frontmost_application_unless" | "device_if" | "device_unless" | "keyboard_type_if" | "keyboard_type_unless" | "input_source_if" | "input_source_unless" | "variable_if" | "variable_unless"
+
+typealias KeyboardType = "ansi" | "iso" | "jis"
+
+class Modifiers {
+  mandatory: List<Modifier>?
+  optional: List<Modifier>?
+}
+
+typealias Modifier = "caps_lock" | "left_command" | "left_control" | "left_option" | "left_shift" | "right_command" | "right_control" | "right_option" | "right_shift" | "fn" | "command" | "control" | "option" | "shift" | "any"
+
+class SimultaneousOptions {
+  detect_key_down_uninterruptedly: Boolean?
+  key_down_order: "insensitive" | "strict" | "strict_inverse"?
+  key_up_order: "insensitive" | "strict" | "strict_inverse"?
+  key_up_when: "any" | "all"?
+  to_after_key_up: List<ToEvent>?
+}
+
+class InputSource {
+  language: String?
+  input_source_id: String?
+  input_mode_id: String?
+}
+
+class SetVariable {
+  name: String
+  value: String | Int | Boolean
+}
+
+class MouseKey {
+  x: Int?
+  y: Int?
+  vertical_wheel: Int?
+  horizontal_wheel: Int?
+  speed_multiplier: Float?
+}
+
+class StickyModifier {
+  modifier: Modifier
+}
+
+class ManipulatorParameters {
+  `basic.simultaneous_threshold_milliseconds`: Int?
+  `basic.to_delayed_action_delay_milliseconds`: Int?
+  `basic.to_if_alone_timeout_milliseconds`: Int?
+  `basic.to_if_held_down_threshold_milliseconds`: Int?
+  `mouse_motion_to_scroll.speed`: Int?
+}
+
+class Parameters {
+  delay_milliseconds_before_open_device: Int = 1000
+}
+
+typealias KeyCode = String
+
+typealias ConsumerKeyCode = String
+
+typealias PointingButton = String
+
+// Helper functions and generators will be added here
+
+// Simplified configuration that only uses the default profile
+class SimpleConfig {
+  simple_modifications: List<SimpleModification> = List()
+  complex_modifications: ComplexModifications?
+  parameters: Parameters?
+  devices: List<Device> = List()
+  
+  function toConfig(): Config = new Config {
+    profiles = List(
+      new Profile {
+        name = "Default"
+        selected = true
+        simple_modifications = this.simple_modifications
+        complex_modifications = this.complex_modifications
+        parameters = this.parameters
+        devices = this.devices
+      }
+    )
+  }
+}

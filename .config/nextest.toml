@@ -1,0 +1,20 @@
+# cargo-nextest configuration
+
+[profile.default]
+# Run tests with 2 threads by default
+test-threads = 2
+
+# Show test output only on failure
+failure-output = "immediate"
+success-output = "never"
+
+# Retry flaky tests
+retries = { backoff = "exponential", count = 2, delay = "1s" }
+
+[profile.ci]
+# CI-specific settings
+test-threads = 4
+failure-output = "immediate"
+success-output = "final"
+# Don't retry in CI
+retries = 0

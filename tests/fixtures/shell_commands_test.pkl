@@ -1,0 +1,49 @@
+module shell_commands_test
+
+import "karabiner.pkl" as karabiner
+import "helpers.pkl" as helpers
+
+// Test shell commands and templates from karabiner.edn
+simpleConfig: karabiner.SimpleConfig = new {
+  complex_modifications = new karabiner.ComplexModifications {
+    rules = List(
+      new karabiner.Rule {
+        description = "Yabai window management commands"
+        manipulators = List(
+          new karabiner.Manipulator {
+            type = "basic"
+            from = new karabiner.FromEvent {
+              key_code = "u"
+              modifiers = new karabiner.Modifiers {
+                mandatory = List("d")
+              }
+            }
+            to = List(
+              new karabiner.ToEvent {
+                shell_command = "/opt/homebrew/bin/yabai -m space --focus 1"
+              }
+            )
+          },
+          new karabiner.Manipulator {
+            type = "basic"
+            from = new karabiner.FromEvent {
+              key_code = "left_command"
+            }
+            to = List(
+              new karabiner.ToEvent {
+                key_code = "left_command"
+              }
+            )
+            to_if_alone = List(
+              new karabiner.ToEvent {
+                shell_command = "/opt/homebrew/bin/yabai -m space --focus recent"
+              }
+            )
+          }
+        )
+      }
+    )
+  }
+}
+
+config: karabiner.Config = simpleConfig.toConfig()
