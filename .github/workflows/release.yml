@@ -1,0 +1,259 @@
+name: Release
+
+on:
+  push:
+    branches: [production]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 0.1.0)'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release:
+    name: Build and Release
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        include:
+          - target: x86_64-apple-darwin
+            name: intel
+          - target: aarch64-apple-darwin
+            name: apple-silicon
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install Pkl
+        run: |
+          curl -L -o pkl https://github.com/apple/pkl/releases/latest/download/pkl-macos-${{ matrix.target == 'x86_64-apple-darwin' && 'amd64' || 'aarch64' }}
+          chmod +x pkl
+          sudo mv pkl /usr/local/bin/
+          pkl --version
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo index
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo build
+        uses: actions/cache@v4
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-build-target-${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Determine version
+        id: version
+        run: |
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION=$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[0].version')
+          fi
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "TAG=v$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Build release binary
+        run: |
+          cargo build --release --target ${{ matrix.target }}
+          cp target/${{ matrix.target }}/release/karabiner-pkl karabiner-pkl-${{ matrix.name }}
+
+      - name: Run tests
+        run: cargo test --release --target ${{ matrix.target }}
+
+      - name: Create tarball
+        run: |
+          tar czf karabiner-pkl-${{ steps.version.outputs.VERSION }}-${{ matrix.name }}.tar.gz karabiner-pkl-${{ matrix.name }}
+          shasum -a 256 karabiner-pkl-${{ steps.version.outputs.VERSION }}-${{ matrix.name }}.tar.gz > karabiner-pkl-${{ steps.version.outputs.VERSION }}-${{ matrix.name }}.tar.gz.sha256
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: karabiner-pkl-${{ matrix.name }}
+          path: |
+            karabiner-pkl-${{ steps.version.outputs.VERSION }}-${{ matrix.name }}.tar.gz
+            karabiner-pkl-${{ steps.version.outputs.VERSION }}-${{ matrix.name }}.tar.gz.sha256
+
+      - name: Create or update release
+        if: matrix.target == 'x86_64-apple-darwin'  # Only do this once
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.TAG }}
+          name: Release ${{ steps.version.outputs.VERSION }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.TAG }}
+          files: |
+            karabiner-pkl-${{ steps.version.outputs.VERSION }}-${{ matrix.name }}.tar.gz
+            karabiner-pkl-${{ steps.version.outputs.VERSION }}-${{ matrix.name }}.tar.gz.sha256
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  create-bottles:
+    name: Create Homebrew Bottles
+    needs: release
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get version
+        id: version
+        run: |
+          VERSION=$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[0].version')
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "TAG=v$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Install Homebrew
+        run: |
+          /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+      - name: Create temporary formula
+        run: |
+          mkdir -p Formula
+          cat > Formula/karabiner-pkl.rb << EOF
+          class KarabinerPkl < Formula
+            desc "Configuration tool for Karabiner-Elements using Pkl"
+            homepage "https://github.com/lrangell/karabiner-pkl"
+            version "${{ steps.version.outputs.VERSION }}"
+            
+            if Hardware::CPU.intel?
+              url "https://github.com/lrangell/karabiner-pkl/releases/download/${{ steps.version.outputs.TAG }}/karabiner-pkl-${{ steps.version.outputs.VERSION }}-intel.tar.gz"
+              sha256 "$(cat artifacts/karabiner-pkl-intel/karabiner-pkl-${{ steps.version.outputs.VERSION }}-intel.tar.gz.sha256 | awk '{print $1}')"
+            else
+              url "https://github.com/lrangell/karabiner-pkl/releases/download/${{ steps.version.outputs.TAG }}/karabiner-pkl-${{ steps.version.outputs.VERSION }}-apple-silicon.tar.gz"
+              sha256 "$(cat artifacts/karabiner-pkl-apple-silicon/karabiner-pkl-${{ steps.version.outputs.VERSION }}-apple-silicon.tar.gz.sha256 | awk '{print $1}')"
+            end
+            
+            def install
+              if Hardware::CPU.intel?
+                bin.install "karabiner-pkl-intel" => "karabiner-pkl"
+              else
+                bin.install "karabiner-pkl-apple-silicon" => "karabiner-pkl"
+              end
+            end
+            
+            test do
+              system "#{bin}/karabiner-pkl", "--version"
+            end
+          end
+          EOF
+
+      - name: Build bottle
+        run: |
+          brew install --build-bottle Formula/karabiner-pkl.rb
+          brew bottle Formula/karabiner-pkl.rb
+
+      - name: Upload bottle to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.TAG }}
+          files: karabiner-pkl--${{ steps.version.outputs.VERSION }}*.bottle.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  update-tap:
+    name: Update Homebrew Tap
+    needs: create-bottles
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get version
+        id: version
+        run: |
+          # Parse version from release tag
+          VERSION="${{ github.ref_name }}"
+          if [[ "$VERSION" == "production" ]]; then
+            # If triggered from production branch, get the latest release
+            VERSION=$(curl -s https://api.github.com/repos/lrangell/karabiner-pkl/releases/latest | jq -r '.tag_name')
+          fi
+          echo "VERSION=${VERSION#v}" >> $GITHUB_OUTPUT
+          echo "TAG=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Checkout tap repository
+        uses: actions/checkout@v4
+        with:
+          repository: lrangell/homebrew-karabiner-pkl
+          token: ${{ secrets.GH_PAT }}
+          path: tap
+
+      - name: Update formula
+        run: |
+          cd tap
+          mkdir -p Formula
+          
+          # Download release info
+          RELEASE_INFO=$(curl -s https://api.github.com/repos/lrangell/karabiner-pkl/releases/tags/${{ steps.version.outputs.TAG }})
+          
+          # Get SHA256 for each architecture
+          INTEL_SHA=$(curl -sL $(echo "$RELEASE_INFO" | jq -r '.assets[] | select(.name | contains("intel.tar.gz.sha256")) | .browser_download_url') | awk '{print $1}')
+          ARM_SHA=$(curl -sL $(echo "$RELEASE_INFO" | jq -r '.assets[] | select(.name | contains("apple-silicon.tar.gz.sha256")) | .browser_download_url') | awk '{print $1}')
+          
+          # Get bottle SHA if exists
+          BOTTLE_SHA=$(echo "$RELEASE_INFO" | jq -r '.assets[] | select(.name | contains("bottle.tar.gz")) | .name' | head -1)
+          
+          cat > Formula/karabiner-pkl.rb << EOF
+          class KarabinerPkl < Formula
+            desc "Configuration tool for Karabiner-Elements using Pkl"
+            homepage "https://github.com/lrangell/karabiner-pkl"
+            version "${{ steps.version.outputs.VERSION }}"
+            license "MIT"
+            
+            if Hardware::CPU.intel?
+              url "https://github.com/lrangell/karabiner-pkl/releases/download/${{ steps.version.outputs.TAG }}/karabiner-pkl-${{ steps.version.outputs.VERSION }}-intel.tar.gz"
+              sha256 "$INTEL_SHA"
+            else
+              url "https://github.com/lrangell/karabiner-pkl/releases/download/${{ steps.version.outputs.TAG }}/karabiner-pkl-${{ steps.version.outputs.VERSION }}-apple-silicon.tar.gz"
+              sha256 "$ARM_SHA"
+            end
+            
+            def install
+              if Hardware::CPU.intel?
+                bin.install "karabiner-pkl-intel" => "karabiner-pkl"
+              else
+                bin.install "karabiner-pkl-apple-silicon" => "karabiner-pkl"
+              end
+            end
+            
+            test do
+              system "#{bin}/karabiner-pkl", "--version"
+            end
+          end
+          EOF
+          
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add Formula/karabiner-pkl.rb
+          git commit -m "Update karabiner-pkl to ${{ steps.version.outputs.VERSION }}"
+          git push

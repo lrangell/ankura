@@ -1,0 +1,63 @@
+name: Test Suite
+
+on:
+  push:
+    branches: [main, production]
+  pull_request:
+    branches: [main, production]
+  workflow_dispatch:
+
+env:
+  RUST_BACKTRACE: 1
+
+jobs:
+  nextest:
+    name: Nextest
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Pkl
+        run: |
+          # Detect architecture and install appropriate Pkl binary
+          if [[ $(uname -m) == "arm64" ]]; then
+            curl -L -o pkl https://github.com/apple/pkl/releases/latest/download/pkl-macos-aarch64
+          else
+            curl -L -o pkl https://github.com/apple/pkl/releases/latest/download/pkl-macos-amd64
+          fi
+          chmod +x pkl
+          sudo mv pkl /usr/local/bin/
+          pkl --version
+
+      - name: Install cargo-nextest
+        uses: taiki-e/install-action@nextest
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo index
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo build
+        uses: actions/cache@v4
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-nextest-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Run tests with nextest
+        run: cargo nextest run --all-features
+
+      - name: Generate test report
+        if: always()
+        run: cargo nextest run --all-features --profile ci
+        continue-on-error: true
