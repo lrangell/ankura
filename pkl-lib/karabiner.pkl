@@ -94,7 +94,6 @@ class FromEvent {
   key_code: KeyCode?
   consumer_key_code: ConsumerKeyCode?
   pointing_button: PointingButton?
-  any: "key_code" | "consumer_key_code" | "pointing_button"?
   modifiers: Modifiers?
   simultaneous: List<FromEvent>?
   simultaneous_options: SimultaneousOptions?
@@ -147,7 +146,7 @@ class SimultaneousOptions {
   detect_key_down_uninterruptedly: Boolean?
   key_down_order: "insensitive" | "strict" | "strict_inverse"?
   key_up_order: "insensitive" | "strict" | "strict_inverse"?
-  key_up_when: "any" | "all"?
+  hidden key_up_when: "any" | "all"?
   to_after_key_up: List<ToEvent>?
 }
 
@@ -201,16 +200,21 @@ class SimpleConfig {
   parameters: Parameters?
   devices: List<Device> = List()
   
-  function toConfig(): Config = new Config {
-    profiles = List(
-      new Profile {
-        name = "Default"
-        selected = true
-        simple_modifications = this.simple_modifications
-        complex_modifications = this.complex_modifications
-        parameters = this.parameters
-        devices = this.devices
-      }
-    )
-  }
+  function toConfig(): Config = 
+    let (mods = simple_modifications)
+    let (complexMods = complex_modifications)
+    let (params = parameters)
+    let (devs = devices)
+    new Config {
+      profiles = List(
+        new Profile {
+          name = "Default"
+          selected = true
+          simple_modifications = mods
+          complex_modifications = complexMods
+          parameters = params
+          devices = devs
+        }
+      )
+    }
 }
