@@ -23,11 +23,12 @@ jobs:
 
       - name: Install Pkl
         run: |
+          PKL_VERSION="0.28.2"
           # Detect architecture and install appropriate Pkl binary
           if [[ $(uname -m) == "arm64" ]]; then
-            curl -L -o pkl https://github.com/apple/pkl/releases/latest/download/pkl-macos-aarch64
+            curl -L -o pkl https://github.com/apple/pkl/releases/download/${PKL_VERSION}/pkl-macos-aarch64
           else
-            curl -L -o pkl https://github.com/apple/pkl/releases/latest/download/pkl-macos-amd64
+            curl -L -o pkl https://github.com/apple/pkl/releases/download/${PKL_VERSION}/pkl-macos-amd64
           fi
           chmod +x pkl
           sudo mv pkl /usr/local/bin/

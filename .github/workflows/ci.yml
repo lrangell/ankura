@@ -26,12 +26,13 @@ jobs:
 
       - name: Install Pkl
         run: |
+          PKL_VERSION="0.28.2"
           if [[ "${{ matrix.os }}" == "macos-latest" ]]; then
             # macOS-latest is Apple Silicon
-            curl -L -o pkl https://github.com/apple/pkl/releases/latest/download/pkl-macos-aarch64
+            curl -L -o pkl https://github.com/apple/pkl/releases/download/${PKL_VERSION}/pkl-macos-aarch64
           else
             # macOS-13 is Intel
-            curl -L -o pkl https://github.com/apple/pkl/releases/latest/download/pkl-macos-amd64
+            curl -L -o pkl https://github.com/apple/pkl/releases/download/${PKL_VERSION}/pkl-macos-amd64
           fi
           chmod +x pkl
           sudo mv pkl /usr/local/bin/
@@ -86,10 +87,11 @@ jobs:
 
       - name: Install Pkl
         run: |
+          PKL_VERSION="0.28.2"
           if [[ "${{ matrix.target }}" == "aarch64-apple-darwin" ]]; then
-            curl -L -o pkl https://github.com/apple/pkl/releases/latest/download/pkl-macos-aarch64
+            curl -L -o pkl https://github.com/apple/pkl/releases/download/${PKL_VERSION}/pkl-macos-aarch64
           else
-            curl -L -o pkl https://github.com/apple/pkl/releases/latest/download/pkl-macos-amd64
+            curl -L -o pkl https://github.com/apple/pkl/releases/download/${PKL_VERSION}/pkl-macos-amd64
           fi
           chmod +x pkl
           sudo mv pkl /usr/local/bin/
