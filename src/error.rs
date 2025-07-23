@@ -62,6 +62,14 @@ pub enum KarabinerPklError {
     #[error("Daemon error")]
     #[diagnostic(code(karabiner_pkl::daemon_error))]
     DaemonError { message: String },
+
+    #[error("Failed to write configuration file")]
+    #[diagnostic(code(karabiner_pkl::config_write_error))]
+    ConfigWriteError {
+        path: PathBuf,
+        #[source]
+        source: std::io::Error,
+    },
 }
 
 pub type Result<T> = std::result::Result<T, KarabinerPklError>;

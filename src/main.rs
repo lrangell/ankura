@@ -2,6 +2,7 @@ mod cli;
 mod compiler;
 mod daemon;
 mod error;
+mod import;
 mod logging;
 mod notifications;
 
@@ -46,6 +47,9 @@ async fn main() -> miette::Result<()> {
         }
         Commands::Init { force } => {
             init_config(config_path, force).await?;
+        }
+        Commands::Add { source, name } => {
+            add_import(source, name).await?;
         }
     }
 
@@ -148,34 +152,30 @@ async fn init_config(config_path: PathBuf, force: bool) -> Result<()> {
 
     println!("Creating example configuration at: {}", config_path.display());
     
-    let example_config = r#"module karabiner
+    let example_config = r#"module karabiner_config
 
-module karabiner
+import "@karabiner"
+import "@helpers"
 
-profiles = List {
-  new {
-    name = "Default"
-    selected = true
+// Your configuration using the simplified API
+simpleConfig: karabiner.SimpleConfig = new {
+  simple_modifications = List {
+    helpers.remap("caps_lock", "escape")
+  }
+  
+  complex_modifications = new karabiner.ComplexModifications {
     rules = List {
-      new {
-        description = "Caps Lock to Escape"
-        manipulators = List {
-          new {
-            type = "basic"
-            from = new {
-              key_code = "caps_lock"
-            }
-            to = List {
-              new {
-                key_code = "escape"
-              }
-            }
-          }
-        }
-      }
+      helpers.capsLockToEscapeControl()
+      
+      // Add more rules here
+      // Example: helpers.vimNavigation("left_control")
+      // Example: helpers.shiftLayer("semicolon")
     }
   }
 }
+
+// Export the full config for Karabiner
+config: karabiner.Config = simpleConfig.toConfig()
 "#;
 
     if let Some(parent) = config_path.parent() {
@@ -196,6 +196,18 @@ profiles = List {
 
     println!("✅ Created example configuration!");
     println!("Edit {} and run 'karabiner-pkl compile' to test", config_path.display());
+    
+    Ok(())
+}
+
+async fn add_import(source: String, name: Option<String>) -> Result<()> {
+    use import::Importer;
+    
+    let importer = Importer::new()?;
+    importer.import(&source, name).await?;
+    
+    println!("✅ Successfully imported file to library");
+    println!("The file will be automatically imported when you compile your configuration.");
     
     Ok(())
 }

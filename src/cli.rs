@@ -41,4 +41,12 @@ pub enum Commands {
         #[arg(short, long)]
         force: bool,
     },
+
+    Add {
+        #[arg(help = "Path to a local .pkl file or URL to import")]
+        source: String,
+
+        #[arg(short, long, help = "Name for the imported file (defaults to source filename)")]
+        name: Option<String>,
+    },
 }
