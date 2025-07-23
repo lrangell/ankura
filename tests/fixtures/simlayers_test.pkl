@@ -12,20 +12,20 @@ simpleConfig: karabiner.SimpleConfig = new {
     
     rules = List(
       // D-mode for yabai window management
-      helpers.layer("d", new Mapping {
+      helpers.simlayer("d", new Mapping {
         ["h"] = helpers.Keys.left_arrow
         ["j"] = helpers.Keys.down_arrow
         ["k"] = helpers.Keys.up_arrow
         ["l"] = helpers.Keys.right_arrow
-      }),
+      }, null),
       
       // F-mode for navigation
-      helpers.layer("f", new Mapping {
+      helpers.simlayer("f", new Mapping {
         ["h"] = helpers.Keys.left_arrow
         ["j"] = helpers.Keys.down_arrow
         ["k"] = helpers.Keys.up_arrow
         ["l"] = helpers.Keys.right_arrow
-      })
+      }, null)
     )
   }
 }

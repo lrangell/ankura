@@ -3,3 +3,7 @@ mod simlayers_test;
 mod shift_layers_test;
 mod shell_commands_test;
 mod import_test;
+mod space_mode_test;
+mod caps_lock_simple_test;
+mod generators_test;
+mod advanced_pkl_test;

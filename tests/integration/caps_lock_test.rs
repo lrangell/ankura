@@ -25,7 +25,7 @@ config: karabiner.Config = simpleConfig.toConfig()
     let result = ctx.compile_pkl_to_json(&pkl_file).expect("Failed to compile");
     
     // Check that the rule was created correctly
-    let rules = &result["profiles"][0]["complex_modifications"]["rules"];
+    let rules = &result["config"]["profiles"][0]["complex_modifications"]["rules"];
     assert_eq!(rules[0]["description"], "Caps Lock to Escape when alone, Control when held");
     
     let manipulator = &rules[0]["manipulators"][0];
@@ -43,6 +43,6 @@ fn test_caps_lock_in_fixtures() {
     let result = ctx.compile_pkl_to_json(&pkl_file).expect("Failed to compile fixture");
     
     // Verify the fixture compiles and produces expected output
-    assert_eq!(result["profiles"][0]["name"], "Default");
-    assert!(result["profiles"][0]["complex_modifications"]["rules"].as_array().unwrap().len() > 0);
+    assert_eq!(result["config"]["profiles"][0]["name"], "Default");
+    assert!(result["config"]["profiles"][0]["complex_modifications"]["rules"].as_array().unwrap().len() > 0);
 }

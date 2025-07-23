@@ -8,7 +8,7 @@ fn test_shell_commands() {
     let pkl_file = ctx.write_pkl_file("shell_commands.pkl", &fixture_content);
     let result = ctx.compile_pkl_to_json(&pkl_file).expect("Failed to compile");
     
-    let rule = &result["profiles"][0]["complex_modifications"]["rules"][0];
+    let rule = &result["config"]["profiles"][0]["complex_modifications"]["rules"][0];
     let manipulators = rule["manipulators"].as_array().unwrap();
     
     // Test yabai space focus command
@@ -58,7 +58,7 @@ config: karabiner.Config = simpleConfig.toConfig()
     let pkl_file = ctx.write_pkl_file("app_switcher_test.pkl", pkl_content);
     let result = ctx.compile_pkl_to_json(&pkl_file).expect("Failed to compile");
     
-    let rule = &result["profiles"][0]["complex_modifications"]["rules"][0];
+    let rule = &result["config"]["profiles"][0]["complex_modifications"]["rules"][0];
     assert_eq!(rule["description"], "App Switcher: left_command + key");
     
     let manipulators = rule["manipulators"].as_array().unwrap();

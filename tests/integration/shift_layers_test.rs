@@ -24,7 +24,7 @@ config: karabiner.Config = simpleConfig.toConfig()
     let pkl_file = ctx.write_pkl_file("shift_layer_test.pkl", pkl_content);
     let result = ctx.compile_pkl_to_json(&pkl_file).expect("Failed to compile");
     
-    let rule = &result["profiles"][0]["complex_modifications"]["rules"][0];
+    let rule = &result["config"]["profiles"][0]["complex_modifications"]["rules"][0];
     assert_eq!(rule["description"], "Shift Layer: semicolon + key");
     
     // Should have manipulators for all letters and numbers
@@ -49,7 +49,7 @@ fn test_multiple_shift_layers() {
     let pkl_file = ctx.write_pkl_file("fixture_shift_layers.pkl", &fixture_content);
     let result = ctx.compile_pkl_to_json(&pkl_file).expect("Failed to compile fixture");
     
-    let rules = result["profiles"][0]["complex_modifications"]["rules"].as_array().unwrap();
+    let rules = result["config"]["profiles"][0]["complex_modifications"]["rules"].as_array().unwrap();
     assert_eq!(rules.len(), 2); // semicolon and a shift layers
     
     assert_eq!(rules[0]["description"], "Shift Layer: semicolon + key");

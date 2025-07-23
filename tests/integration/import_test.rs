@@ -100,6 +100,6 @@ config: karabiner.Config = simpleConfig.toConfig()
     let result: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
     
     // Verify the imported rule is present
-    let rule = &result["profiles"][0]["complex_modifications"]["rules"][0];
+    let rule = &result["config"]["profiles"][0]["complex_modifications"]["rules"][0];
     assert_eq!(rule["description"], "Custom rule from library");
 }
