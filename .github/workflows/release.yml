@@ -15,7 +15,50 @@ permissions:
   packages: write
 
 jobs:
+  test:
+    name: Run Tests
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest, macos-13]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Pkl
+        run: |
+          if [[ "${{ matrix.os }}" == "macos-latest" ]]; then
+            curl -L -o pkl https://github.com/apple/pkl/releases/latest/download/pkl-macos-aarch64
+          else
+            curl -L -o pkl https://github.com/apple/pkl/releases/latest/download/pkl-macos-amd64
+          fi
+          chmod +x pkl
+          sudo mv pkl /usr/local/bin/
+          pkl --version
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo index
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Run tests
+        run: cargo test --all-features
+
+      - name: Run clippy
+        run: cargo clippy -- -D warnings
+
   release:
+    needs: test
     name: Build and Release
     runs-on: macos-latest
     strategy:
@@ -118,7 +161,7 @@ jobs:
 
   create-bottles:
     name: Create Homebrew Bottles
-    needs: release
+    needs: [test, release]
     runs-on: macos-latest
     steps:
       - name: Checkout code
@@ -186,7 +229,7 @@ jobs:
 
   update-tap:
     name: Update Homebrew Tap
-    needs: create-bottles
+    needs: [test, create-bottles]
     runs-on: ubuntu-latest
     steps:
       - name: Get version

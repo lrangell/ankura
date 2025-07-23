@@ -125,24 +125,26 @@ class LayerConfig {
   threshold: Int = 200
   
   function toRule(): karabiner.Rule = 
-    let (manipulators = mappings.toMap().entries.map((entry) ->
-      new karabiner.Manipulator {
-        type = "basic"
-        from = new karabiner.FromEvent {
-          key_code = entry.key
-          modifiers = new karabiner.Modifiers {
-            mandatory = List(outer.trigger)
+    let (triggerKey = trigger)
+    let (thresholdValue = threshold)
+    let (descriptionText = description)
+    new karabiner.Rule {
+      description = descriptionText
+      manipulators = mappings.toMap().entries.map((entry) ->
+        new karabiner.Manipulator {
+          type = "basic"
+          from = new karabiner.FromEvent {
+            key_code = entry.key
+            modifiers = new karabiner.Modifiers {
+              mandatory = List(triggerKey)
+            }
+          }
+          to = List(new karabiner.ToEvent { key_code = entry.value })
+          parameters = new karabiner.ManipulatorParameters {
+            `basic.simultaneous_threshold_milliseconds` = thresholdValue
           }
         }
-        to = List(new karabiner.ToEvent { key_code = entry.value })
-        parameters = new karabiner.ManipulatorParameters {
-          `basic.simultaneous_threshold_milliseconds` = outer.threshold
-        }
-      }
-    ))
-    new karabiner.Rule {
-      description = outer.description
-      manipulators = manipulators
+      )
     }
 }
 
@@ -151,7 +153,7 @@ myLayer = new LayerConfig {
   trigger = "right_option"
   description = "Custom Layer with Class"
   threshold = 300
-  mappings = new Mapping {
+  mappings = new Mapping<String, String> {
     ["1"] = "f1"
     ["2"] = "f2"
     ["3"] = "f3"

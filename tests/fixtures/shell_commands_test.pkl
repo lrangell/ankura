@@ -13,9 +13,13 @@ simpleConfig: karabiner.SimpleConfig = new {
           new karabiner.Manipulator {
             type = "basic"
             from = new karabiner.FromEvent {
-              key_code = "u"
-              modifiers = new karabiner.Modifiers {
-                mandatory = List("d")
+              simultaneous = List(
+                new karabiner.FromEvent { key_code = "d" },
+                new karabiner.FromEvent { key_code = "u" }
+              )
+              simultaneous_options = new karabiner.SimultaneousOptions {
+                key_down_order = "strict"
+                key_up_order = "strict_inverse"
               }
             }
             to = List(

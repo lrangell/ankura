@@ -33,7 +33,7 @@ function testFunction(): karabiner.Rule = new karabiner.Rule {
     assert!(content.contains("Test imported rule"));
 }
 
-#[test] 
+#[test]
 fn test_module_path_compilation() {
     let ctx = TestContext::new();
     
@@ -44,7 +44,7 @@ fn test_module_path_compilation() {
     let lib_content = r#"
 module my_lib
 
-import "karabiner.pkl" as karabiner
+import "modulepath:/karabiner.pkl" as karabiner
 
 function myCustomRule(): karabiner.Rule = new karabiner.Rule {
   description = "Custom rule from library"
@@ -60,13 +60,27 @@ function myCustomRule(): karabiner.Rule = new karabiner.Rule {
     
     std::fs::write(lib_dir.join("my_lib.pkl"), lib_content).unwrap();
     
+    // Copy the required pkl-lib files to temp directory
+    let manifest_dir = env!("CARGO_MANIFEST_DIR");
+    let pkl_lib_dir = PathBuf::from(manifest_dir).join("pkl-lib");
+    
+    std::fs::copy(
+        pkl_lib_dir.join("karabiner.pkl"), 
+        ctx.temp_dir.path().join("karabiner.pkl")
+    ).unwrap();
+    std::fs::copy(
+        pkl_lib_dir.join("helpers.pkl"),
+        ctx.temp_dir.path().join("helpers.pkl")
+    ).unwrap();
+    
+    
     // Create main config that imports from lib
     let main_content = r#"
 module test
 
-import "karabiner.pkl" as karabiner
-import "helpers.pkl" as helpers
-import "my_lib.pkl"
+import "modulepath:/karabiner.pkl" as karabiner
+import "modulepath:/helpers.pkl" as helpers
+import "modulepath:/lib/my_lib.pkl"
 
 simpleConfig: karabiner.SimpleConfig = new {
   complex_modifications = new karabiner.ComplexModifications {
@@ -88,12 +102,19 @@ config: karabiner.Config = simpleConfig.toConfig()
     let output = std::process::Command::new(&ctx.pkl_path)
         .args(["eval", "--format=json"])
         .arg("--module-path")
-        .arg(format!("{}:{}", pkl_lib_dir.display(), lib_dir.display()))
+        .arg(format!("{}:{}:{}", pkl_lib_dir.display(), lib_dir.display(), ctx.temp_dir.path().display()))
         .arg(&pkl_file)
         .output()
         .expect("Failed to run pkl");
     
     if !output.status.success() {
+        eprintln!("Command: {:?}", std::process::Command::new(&ctx.pkl_path)
+            .args(["eval", "--format=json"])
+            .arg("--module-path")
+            .arg(format!("{}:{}:{}", pkl_lib_dir.display(), lib_dir.display(), ctx.temp_dir.path().display()))
+            .arg(&pkl_file));
+        eprintln!("Working dir: {:?}", ctx.temp_dir.path());
+        eprintln!("Lib dir contents: {:?}", std::fs::read_dir(&lib_dir).unwrap().collect::<Vec<_>>());
         panic!("Pkl failed: {}", String::from_utf8_lossy(&output.stderr));
     }
     

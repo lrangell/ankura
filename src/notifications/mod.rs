@@ -20,6 +20,7 @@ impl NotificationManager {
         self.send_notification("❌ Error", message, true);
     }
 
+    #[allow(dead_code)]
     pub fn send_info(&self, message: &str) {
         self.send_notification("ℹ️ Info", message, false);
     }

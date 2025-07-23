@@ -13,8 +13,8 @@ fn test_shell_commands() {
     
     // Test yabai space focus command
     let yabai_manip = &manipulators[0];
-    assert_eq!(yabai_manip["from"]["key_code"], "u");
-    assert_eq!(yabai_manip["from"]["modifiers"]["mandatory"][0], "d");
+    assert_eq!(yabai_manip["from"]["simultaneous"][0]["key_code"], "d");
+    assert_eq!(yabai_manip["from"]["simultaneous"][1]["key_code"], "u");
     assert_eq!(
         yabai_manip["to"][0]["shell_command"],
         "/opt/homebrew/bin/yabai -m space --focus 1"
@@ -43,7 +43,7 @@ import "helpers.pkl" as helpers
 simpleConfig: karabiner.SimpleConfig = new {
   complex_modifications = new karabiner.ComplexModifications {
     rules = List(
-      helpers.appSwitcher("left_command", new Mapping {
+      helpers.appSwitcher("left_command", new Mapping<String, String> {
         ["s"] = "Slack"
         ["c"] = "Google Chrome"
         ["t"] = "Terminal"

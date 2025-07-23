@@ -31,12 +31,13 @@ config: karabiner.Config = simpleConfig.toConfig()
     let manipulators = rule["manipulators"].as_array().unwrap();
     assert!(manipulators.len() > 30); // At least a-z and 0-9
     
-    // Check a specific mapping (a -> A)
+    // Check a specific mapping (semicolon + a -> A)
     let a_manipulator = manipulators.iter()
-        .find(|m| m["from"]["key_code"] == "a")
+        .find(|m| m["from"]["simultaneous"][1]["key_code"] == "a")
         .expect("Should have 'a' mapping");
     
-    assert_eq!(a_manipulator["from"]["modifiers"]["mandatory"][0], "semicolon");
+    assert_eq!(a_manipulator["from"]["simultaneous"][0]["key_code"], "semicolon");
+    assert_eq!(a_manipulator["from"]["simultaneous"][1]["key_code"], "a");
     assert_eq!(a_manipulator["to"][0]["key_code"], "a");
     assert_eq!(a_manipulator["to"][0]["modifiers"][0], "left_shift");
 }

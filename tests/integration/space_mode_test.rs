@@ -13,7 +13,7 @@ import "helpers.pkl" as helpers
 simpleConfig: karabiner.SimpleConfig = new {
   complex_modifications = new karabiner.ComplexModifications {
     rules = List(
-      helpers.spaceMode(new Mapping {
+      helpers.spaceMode(new Mapping<String, String> {
         ["h"] = helpers.left_arrow
         ["j"] = helpers.down_arrow
         ["k"] = helpers.up_arrow
@@ -61,7 +61,7 @@ simpleConfig: karabiner.SimpleConfig = new {
   complex_modifications = new karabiner.ComplexModifications {
     rules = List(
       helpers.spaceMode(
-        new Mapping {
+        new Mapping<String, String> {
           ["a"] = "1"
           ["s"] = "2"
         },

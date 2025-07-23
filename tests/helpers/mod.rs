@@ -110,7 +110,7 @@ impl TestContext {
                     let lines: Vec<&str> = error_str.lines().collect();
                     
                     // Look for the line with the caret
-                    for (i, line) in lines.iter().enumerate() {
+                    for (_i, line) in lines.iter().enumerate() {
                         if line.contains('^') {
                             col = line.find('^').unwrap_or(0) + 1;
                             break;
