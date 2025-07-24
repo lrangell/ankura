@@ -1,7 +1,7 @@
 module shell_commands_test
 
-import "karabiner.pkl" as karabiner
-import "helpers.pkl" as helpers
+import "modulepath:/karabiner_pkl/lib/karabiner.pkl" as karabiner
+import "modulepath:/karabiner_pkl/lib/helpers.pkl" as helpers
 
 // Test shell commands and templates from karabiner.edn
 simpleConfig: karabiner.SimpleConfig = new {

@@ -1,4 +1,5 @@
 use crate::helpers::*;
+use karabiner_pkl::cli::{merge_configurations, write_karabiner_config};
 use karabiner_pkl::compiler::Compiler;
 
 #[test]
@@ -65,15 +66,15 @@ config = new karabiner.SimpleConfig {
 
     let pkl_file = ctx.write_pkl_file("update_profile.pkl", pkl_content);
 
-    // Compile with output option
+    // Compile and merge configuration
     let compiler = Compiler::new().expect("Failed to create compiler");
-    let result = tokio_test::block_on(compiler.compile(
-        &pkl_file,
-        None,
-        Some(&output_file.to_string_lossy()),
-    ));
+    let compiled_config =
+        tokio_test::block_on(compiler.compile(&pkl_file, None)).expect("Compile should succeed");
 
-    assert!(result.is_ok(), "Compile should succeed: {:?}", result.err());
+    let final_config =
+        merge_configurations(&output_file, compiled_config).expect("Merge should succeed");
+
+    write_karabiner_config(&output_file, &final_config).expect("Write should succeed");
 
     // Read the updated file
     let updated_content = std::fs::read_to_string(&output_file).unwrap();
@@ -142,15 +143,15 @@ config = new karabiner.SimpleConfig {
 
     let pkl_file = ctx.write_pkl_file("new_profile.pkl", pkl_content);
 
-    // Compile with output option
+    // Compile and merge configuration
     let compiler = Compiler::new().expect("Failed to create compiler");
-    let result = tokio_test::block_on(compiler.compile(
-        &pkl_file,
-        None,
-        Some(&output_file.to_string_lossy()),
-    ));
+    let compiled_config =
+        tokio_test::block_on(compiler.compile(&pkl_file, None)).expect("Compile should succeed");
 
-    assert!(result.is_ok(), "Compile should succeed: {:?}", result.err());
+    let final_config =
+        merge_configurations(&output_file, compiled_config).expect("Merge should succeed");
+
+    write_karabiner_config(&output_file, &final_config).expect("Write should succeed");
 
     // Read the updated file
     let updated_content = std::fs::read_to_string(&output_file).unwrap();
@@ -193,15 +194,12 @@ config = new karabiner.SimpleConfig {
 
     let pkl_file = ctx.write_pkl_file("override_test.pkl", pkl_content);
 
-    // Compile with profile override and output option
+    // Compile with profile override
     let compiler = Compiler::new().expect("Failed to create compiler");
-    let result = tokio_test::block_on(compiler.compile(
-        &pkl_file,
-        Some("CLIProfile"),
-        Some(&output_file.to_string_lossy()),
-    ));
+    let compiled_config = tokio_test::block_on(compiler.compile(&pkl_file, Some("CLIProfile")))
+        .expect("Compile should succeed");
 
-    assert!(result.is_ok(), "Compile should succeed: {:?}", result.err());
+    write_karabiner_config(&output_file, &compiled_config).expect("Write should succeed");
 
     // Read the output file
     let content = std::fs::read_to_string(&output_file).unwrap();

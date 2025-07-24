@@ -7,8 +7,8 @@ fn test_space_mode() {
     let pkl_content = r#"
 module test
 
-import "karabiner.pkl" as karabiner
-import "helpers.pkl" as helpers
+import "modulepath:/karabiner_pkl/lib/karabiner.pkl" as karabiner
+import "modulepath:/karabiner_pkl/lib/helpers.pkl" as helpers
 
 simpleConfig: karabiner.SimpleConfig = new {
   complex_modifications = new karabiner.ComplexModifications {
@@ -30,11 +30,11 @@ config: karabiner.Config = simpleConfig.toConfig()
 
     let pkl_file = ctx.write_pkl_file("space_mode_test.pkl", pkl_content);
     let result = ctx
-        .compile_pkl_to_json(&pkl_file)
+        .compile_pkl_sync(&pkl_file, None)
         .expect("Failed to compile");
 
     // Check that the rule was created correctly
-    let rules = &result["config"]["profiles"][0]["complex_modifications"]["rules"];
+    let rules = &result["profiles"][0]["complex_modifications"]["rules"];
     assert_eq!(rules[0]["description"], "Space Mode: Hold spacebar + key");
 
     let manipulators = &rules[0]["manipulators"];
@@ -59,8 +59,8 @@ fn test_space_mode_with_custom_threshold() {
     let pkl_content = r#"
 module test
 
-import "karabiner.pkl" as karabiner
-import "helpers.pkl" as helpers
+import "modulepath:/karabiner_pkl/lib/karabiner.pkl" as karabiner
+import "modulepath:/karabiner_pkl/lib/helpers.pkl" as helpers
 
 simpleConfig: karabiner.SimpleConfig = new {
   complex_modifications = new karabiner.ComplexModifications {
@@ -81,11 +81,11 @@ config: karabiner.Config = simpleConfig.toConfig()
 
     let pkl_file = ctx.write_pkl_file("space_mode_threshold_test.pkl", pkl_content);
     let result = ctx
-        .compile_pkl_to_json(&pkl_file)
+        .compile_pkl_sync(&pkl_file, None)
         .expect("Failed to compile");
 
     let manipulator =
-        &result["config"]["profiles"][0]["complex_modifications"]["rules"][0]["manipulators"][0];
+        &result["profiles"][0]["complex_modifications"]["rules"][0]["manipulators"][0];
     assert_eq!(
         manipulator["parameters"]["basic.simultaneous_threshold_milliseconds"],
         300

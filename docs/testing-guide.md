@@ -40,21 +40,21 @@ The `TestContext` struct provides a clean abstraction for test setup and executi
 ```rust
 pub struct TestContext {
     temp_dir: TempDir,
-    pkl_path: PathBuf,
+    compiler: Compiler,
 }
 ```
 
 ### Available Methods
 
 #### `new()`
-Creates a new test context with isolated temporary directory.
+Creates a new test context with isolated temporary directory and compiler instance.
 
 ```rust
 let ctx = TestContext::new();
 ```
 
 #### `write_pkl_file(name, content)`
-Writes a Pkl file and copies required library files.
+Writes a Pkl file to the temp directory.
 
 ```rust
 let pkl_file = ctx.write_pkl_file("test.pkl", r#"
@@ -67,15 +67,23 @@ let pkl_file = ctx.write_pkl_file("test.pkl", r#"
 Loads a fixture file from tests/fixtures/.
 
 ```rust
-let (pkl_file, content) = ctx.load_fixture("caps_lock_simple.pkl");
+let content = TestContext::load_fixture("caps_lock_test.pkl");
 ```
 
-#### `compile_pkl_to_json(path)`
-Compiles Pkl to JSON and returns parsed result.
+#### `compile_pkl(&self, pkl_file, profile_name)`
+Asynchronously compiles Pkl to JSON using the Compiler API.
 
 ```rust
-let result = ctx.compile_pkl_to_json(&pkl_file)?;
-assert_eq!(result["config"]["title"], "My Config");
+let result = ctx.compile_pkl(&pkl_file, None).await?;
+assert_eq!(result["profiles"][0]["name"], "pkl");
+```
+
+#### `compile_pkl_sync(&self, pkl_file, profile_name)`
+Synchronous wrapper for tests that don't use async.
+
+```rust
+let result = ctx.compile_pkl_sync(&pkl_file, None)?;
+assert_eq!(result["profiles"][0]["name"], "pkl");
 ```
 
 ## Writing Tests
@@ -105,11 +113,11 @@ fn test_basic_functionality() {
     
     // 3. Write and compile
     let pkl_file = ctx.write_pkl_file("test.pkl", pkl_content);
-    let result = ctx.compile_pkl_to_json(&pkl_file)
+    let result = ctx.compile_pkl_sync(&pkl_file, None)
         .expect("Failed to compile");
     
-    // 4. Verify JSON output
-    let rules = &result["config"]["profiles"][0]["complex_modifications"]["rules"];
+    // 4. Verify JSON output (note: no ["config"] prefix anymore)
+    let rules = &result["profiles"][0]["complex_modifications"]["rules"];
     assert_eq!(rules[0]["description"], "Caps Lock to Escape");
 }
 ```
@@ -120,14 +128,15 @@ fn test_basic_functionality() {
 #[test]
 fn test_complex_configuration() {
     let ctx = TestContext::new();
-    let (pkl_file, _) = ctx.load_fixture("advanced_generators.pkl");
+    let fixture_content = TestContext::load_fixture("caps_lock_test.pkl");
+    let pkl_file = ctx.write_pkl_file("fixture_test.pkl", &fixture_content);
     
-    let result = ctx.compile_pkl_to_json(&pkl_file)
+    let result = ctx.compile_pkl_sync(&pkl_file, None)
         .expect("Failed to compile");
     
     // Verify the generated configuration
-    let rules = &result["config"]["profiles"][0]["complex_modifications"]["rules"];
-    assert_eq!(rules.as_array().unwrap().len(), 10);
+    let rules = &result["profiles"][0]["complex_modifications"]["rules"];
+    assert_eq!(rules.as_array().unwrap().len(), 1);
 }
 ```
 
@@ -142,11 +151,11 @@ fn test_invalid_pkl_syntax() {
     "#;
     
     let pkl_file = ctx.write_pkl_file("invalid.pkl", pkl_content);
-    let result = ctx.compile_pkl_to_json(&pkl_file);
+    let result = ctx.compile_pkl_sync(&pkl_file, None);
     
     assert!(result.is_err());
     if let Err(e) = result {
-        assert!(e.to_string().contains("Parse error"));
+        assert!(e.contains("Compilation failed"));
     }
 }
 ```
@@ -193,9 +202,9 @@ Tests advanced Pkl language features:
 ### 6. Import Tests (`import_test.rs`)
 
 Tests module import functionality:
-- Local file imports
-- URL imports
-- Module resolution
+- Local file imports  
+- Module path compilation
+- Embedded library imports
 
 ### 7. Generator Tests (`generators_test.rs`)
 
@@ -203,12 +212,22 @@ Tests code generation helpers:
 - Character ranges
 - Number ranges
 - QWERTY sequences
+- Vim home row navigation
 
 ### 8. Space Mode Tests (`space_mode_test.rs`)
 
 Tests space-based modal configurations:
 - Space as layer trigger
 - Preserving space functionality
+- Custom threshold values
+
+### 9. Profile Preservation Tests (`profile_preservation_test.rs`)
+
+Tests profile management:
+- Preserving existing profiles
+- Creating new profiles
+- Profile name overrides
+- Merging configurations
 
 ## Running Tests
 
@@ -270,6 +289,7 @@ cat ~/.local/share/karabiner-pkl/logs/karabiner-pkl.log
 - Use inline Pkl content for simple tests
 - Use fixtures for complex configurations
 - Keep fixtures minimal and focused
+- All imports should use `modulepath:/karabiner_pkl/lib/`
 
 ### 3. Assertions
 
@@ -292,10 +312,10 @@ Always test both success and failure cases:
 
 ```rust
 // Success case
-let result = ctx.compile_pkl_to_json(&valid_pkl).unwrap();
+let result = ctx.compile_pkl_sync(&valid_pkl, None).unwrap();
 
 // Failure case
-let result = ctx.compile_pkl_to_json(&invalid_pkl);
+let result = ctx.compile_pkl_sync(&invalid_pkl, None);
 assert!(result.is_err());
 ```
 
@@ -327,10 +347,10 @@ fn test_vim_navigation_helper() {
     "#;
     
     let pkl_file = ctx.write_pkl_file("vim_nav.pkl", pkl_content);
-    let result = ctx.compile_pkl_to_json(&pkl_file).unwrap();
+    let result = ctx.compile_pkl_sync(&pkl_file, None).unwrap();
     
     // Verify vim bindings exist
-    let manipulators = &result["config"]["profiles"][0]
+    let manipulators = &result["profiles"][0]
         ["complex_modifications"]["rules"][0]["manipulators"];
     
     // Check h → left_arrow mapping exists
@@ -390,7 +410,7 @@ While not automated, consider:
    use std::time::Instant;
    
    let start = Instant::now();
-   let _ = ctx.compile_pkl_to_json(&pkl_file)?;
+   let _ = ctx.compile_pkl_sync(&pkl_file, None)?;
    let duration = start.elapsed();
    
    println!("Compilation took: {:?}", duration);
@@ -404,6 +424,23 @@ While not automated, consider:
    - Test with many rules
    - Test with deep nesting
    - Test with many imports
+
+## Test Architecture
+
+### Key Principles
+
+1. **No File I/O in Tests**: Tests use the Compiler API directly instead of running CLI commands
+2. **No System Modifications**: Tests don't write to actual Karabiner config files
+3. **No OS Notifications**: Tests don't emit system notifications
+4. **Direct API Usage**: Tests call `compiler.compile()` which returns JSON
+
+### Separation of Concerns
+
+The test architecture reflects the module separation:
+
+- **Compiler Tests**: Test pure Pkl-to-JSON transformation
+- **CLI Tests**: Test file operations and profile merging
+- **Integration Tests**: Test the full flow using public APIs
 
 ## Continuous Integration
 

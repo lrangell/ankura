@@ -7,8 +7,8 @@ fn test_caps_lock_to_escape_control() {
     let pkl_content = r#"
 module test
 
-import "karabiner.pkl" as karabiner
-import "helpers.pkl" as helpers
+import "modulepath:/karabiner_pkl/lib/karabiner.pkl" as karabiner
+import "modulepath:/karabiner_pkl/lib/helpers.pkl" as helpers
 
 simpleConfig: karabiner.SimpleConfig = new {
   complex_modifications = new karabiner.ComplexModifications {
@@ -23,11 +23,11 @@ config: karabiner.Config = simpleConfig.toConfig()
 
     let pkl_file = ctx.write_pkl_file("caps_lock_test.pkl", pkl_content);
     let result = ctx
-        .compile_pkl_to_json(&pkl_file)
+        .compile_pkl_sync(&pkl_file, None)
         .expect("Failed to compile");
 
     // Check that the rule was created correctly
-    let rules = &result["config"]["profiles"][0]["complex_modifications"]["rules"];
+    let rules = &result["profiles"][0]["complex_modifications"]["rules"];
     assert_eq!(
         rules[0]["description"],
         "Caps Lock to Escape when alone, Control when held"
@@ -46,15 +46,13 @@ fn test_caps_lock_in_fixtures() {
 
     let pkl_file = ctx.write_pkl_file("fixture_caps_lock.pkl", &fixture_content);
     let result = ctx
-        .compile_pkl_to_json(&pkl_file)
+        .compile_pkl_sync(&pkl_file, None)
         .expect("Failed to compile fixture");
 
     // Verify the fixture compiles and produces expected output
-    assert_eq!(result["config"]["profiles"][0]["name"], "pkl");
-    assert!(
-        !result["config"]["profiles"][0]["complex_modifications"]["rules"]
-            .as_array()
-            .unwrap()
-            .is_empty()
-    );
+    assert_eq!(result["profiles"][0]["name"], "pkl");
+    assert!(!result["profiles"][0]["complex_modifications"]["rules"]
+        .as_array()
+        .unwrap()
+        .is_empty());
 }

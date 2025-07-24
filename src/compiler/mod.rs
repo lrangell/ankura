@@ -1,5 +1,5 @@
-use crate::embedded;
 use crate::error::{KarabinerPklError, Result};
+use rust_embed::RustEmbed;
 use serde_json::Value;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -7,9 +7,13 @@ use tempfile::TempDir;
 use tracing::info;
 use which::which;
 
+#[derive(RustEmbed)]
+#[folder = "pkl-lib/"]
+#[include = "*.pkl"]
+struct PklLib;
+
 pub struct Compiler {
     pkl_path: PathBuf,
-    karabiner_config_dir: PathBuf,
     _embedded_temp_dir: Option<TempDir>,
     embedded_lib_path: Option<PathBuf>,
 }
@@ -18,35 +22,19 @@ impl Compiler {
     pub fn new() -> Result<Self> {
         let pkl_path = which("pkl").map_err(|_| KarabinerPklError::PklNotFound)?;
 
-        let home = dirs::home_dir().ok_or_else(|| KarabinerPklError::DaemonError {
-            message: "Could not find home directory".to_string(),
-        })?;
-        let karabiner_config_dir = home.join(".config/karabiner");
-
-        std::fs::create_dir_all(&karabiner_config_dir).map_err(|e| {
-            KarabinerPklError::KarabinerWriteError {
-                path: karabiner_config_dir.clone(),
-                source: e,
-            }
-        })?;
-
         // Extract embedded pkl-lib files once when creating the compiler
-        let (temp_dir, embedded_lib_path) = embedded::extract_pkl_lib()?;
+        let (temp_dir, embedded_lib_path) = Self::extract_pkl_lib()?;
 
         Ok(Self {
             pkl_path,
-            karabiner_config_dir,
             _embedded_temp_dir: Some(temp_dir),
             embedded_lib_path: Some(embedded_lib_path),
         })
     }
 
-    pub async fn compile(
-        &self,
-        config_path: &Path,
-        profile_name: Option<&str>,
-        output_path: Option<&str>,
-    ) -> Result<()> {
+    /// Compile a Pkl configuration file and return the resulting JSON
+    /// Returns the compiled configuration with optional profile name override
+    pub async fn compile(&self, config_path: &Path, profile_name: Option<&str>) -> Result<Value> {
         info!("Compiling {}", config_path.display());
 
         if !config_path.exists() {
@@ -136,90 +124,20 @@ impl Compiler {
 
         self.validate_config(&config)?;
 
-        // Extract the profile from the compiled config
-        let mut new_profile = config["profiles"][0].clone();
-
-        // Override profile name if provided
+        // Apply profile name override if provided
+        let mut final_config = config;
         if let Some(name) = profile_name {
-            new_profile["name"] = serde_json::json!(name);
-        }
-
-        // Determine the target profile name
-        let target_profile_name = new_profile["name"].as_str().unwrap_or("pkl");
-
-        let karabiner_json_path = if let Some(path) = output_path {
-            PathBuf::from(path)
-        } else {
-            self.karabiner_config_dir.join("karabiner.json")
-        };
-
-        // Load existing configuration or create new one
-        let mut final_config = if karabiner_json_path.exists() {
-            let existing_content = std::fs::read_to_string(&karabiner_json_path).map_err(|e| {
-                KarabinerPklError::ConfigReadError {
-                    path: karabiner_json_path.clone(),
-                    source: e,
+            if let Some(profiles) = final_config
+                .get_mut("profiles")
+                .and_then(|p| p.as_array_mut())
+            {
+                if let Some(first_profile) = profiles.get_mut(0) {
+                    first_profile["name"] = serde_json::json!(name);
                 }
-            })?;
-
-            serde_json::from_str(&existing_content)
-                .map_err(|e| KarabinerPklError::JsonParseError { source: e })?
-        } else {
-            // Create a new config with just the title
-            serde_json::json!({
-                "profiles": []
-            })
-        };
-
-        // Ensure we have a profiles array
-        if !final_config
-            .get("profiles")
-            .map(|p| p.is_array())
-            .unwrap_or(false)
-        {
-            final_config["profiles"] = serde_json::json!([]);
-        }
-
-        // Update or add the profile
-        let profiles = final_config["profiles"].as_array_mut().unwrap();
-
-        // Find existing profile with the same name
-        let existing_profile_index = profiles
-            .iter()
-            .position(|p| p["name"].as_str() == Some(target_profile_name));
-
-        if let Some(index) = existing_profile_index {
-            // Update existing profile
-            profiles[index] = new_profile;
-        } else {
-            // Add new profile - should not be selected by default
-            new_profile["selected"] = serde_json::json!(false);
-            profiles.push(new_profile);
-        }
-
-        // Set title if not present
-        if final_config.get("title").is_none() {
-            final_config["title"] = config
-                .get("title")
-                .cloned()
-                .unwrap_or_else(|| serde_json::json!("Karabiner-Pkl Configuration"));
-        }
-
-        let pretty_json = serde_json::to_string_pretty(&final_config)
-            .map_err(|e| KarabinerPklError::JsonParseError { source: e })?;
-
-        std::fs::write(&karabiner_json_path, pretty_json).map_err(|e| {
-            KarabinerPklError::KarabinerWriteError {
-                path: karabiner_json_path.clone(),
-                source: e,
             }
-        })?;
+        }
 
-        info!(
-            "Successfully wrote configuration to {}",
-            karabiner_json_path.display()
-        );
-        Ok(())
+        Ok(final_config)
     }
 
     fn validate_config(&self, config: &Value) -> Result<()> {
@@ -236,7 +154,14 @@ impl Compiler {
         }
 
         let profiles = config.get("profiles").unwrap();
-        if !profiles.is_array() || profiles.as_array().unwrap().is_empty() {
+        if !profiles.is_array() {
+            return Err(KarabinerPklError::ValidationError {
+                message: "'profiles' must be an array".to_string(),
+            });
+        }
+
+        let profiles_array = profiles.as_array().unwrap();
+        if profiles_array.is_empty() {
             return Err(KarabinerPklError::ValidationError {
                 message: "Configuration must contain at least one profile".to_string(),
             });
@@ -281,5 +206,38 @@ impl Compiler {
             }
         }
         None
+    }
+
+    /// Extract embedded pkl-lib files to a temporary directory with the expected structure
+    /// Returns the path to the directory containing the module structure
+    fn extract_pkl_lib() -> Result<(TempDir, PathBuf)> {
+        let temp_dir = TempDir::new().map_err(|e| KarabinerPklError::DaemonError {
+            message: format!("Failed to create temporary directory: {e}"),
+        })?;
+
+        // Create the expected directory structure: karabiner_pkl/lib/
+        let module_base = temp_dir.path().join("karabiner_pkl").join("lib");
+        std::fs::create_dir_all(&module_base).map_err(|e| KarabinerPklError::DaemonError {
+            message: format!("Failed to create module directory structure: {e}"),
+        })?;
+
+        // Extract all embedded pkl files
+        for file in PklLib::iter() {
+            let file_path = module_base.join(file.as_ref());
+
+            if let Some(content) = PklLib::get(&file) {
+                // Extract the file
+                std::fs::write(&file_path, content.data).map_err(|e| {
+                    KarabinerPklError::DaemonError {
+                        message: format!("Failed to write embedded file {}: {}", file.as_ref(), e),
+                    }
+                })?;
+            }
+        }
+
+        // Return both the TempDir (to keep it alive) and the base path for module resolution
+        let base_path = temp_dir.path().to_path_buf();
+        // Module structure created successfully
+        Ok((temp_dir, base_path))
     }
 }

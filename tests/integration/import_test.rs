@@ -1,5 +1,4 @@
 use crate::helpers::TestContext;
-use std::path::PathBuf;
 
 #[test]
 fn test_import_local_file() {
@@ -37,56 +36,18 @@ function testFunction(): karabiner.Rule = new karabiner.Rule {
 fn test_module_path_compilation() {
     let ctx = TestContext::new();
 
-    // Create a library file
-    let lib_dir = ctx.temp_dir.path().join("lib");
-    std::fs::create_dir_all(&lib_dir).unwrap();
-
-    let lib_content = r#"
-module my_lib
-
-import "modulepath:/karabiner.pkl" as karabiner
-
-function myCustomRule(): karabiner.Rule = new karabiner.Rule {
-  description = "Custom rule from library"
-  manipulators = List(
-    new karabiner.Manipulator {
-      type = "basic"
-      from = new karabiner.FromEvent { key_code = "f1" }
-      to = List(new karabiner.ToEvent { key_code = "escape" })
-    }
-  )
-}
-"#;
-
-    std::fs::write(lib_dir.join("my_lib.pkl"), lib_content).unwrap();
-
-    // Copy the required pkl-lib files to temp directory
-    let manifest_dir = env!("CARGO_MANIFEST_DIR");
-    let pkl_lib_dir = PathBuf::from(manifest_dir).join("pkl-lib");
-
-    std::fs::copy(
-        pkl_lib_dir.join("karabiner.pkl"),
-        ctx.temp_dir.path().join("karabiner.pkl"),
-    )
-    .unwrap();
-    std::fs::copy(
-        pkl_lib_dir.join("helpers.pkl"),
-        ctx.temp_dir.path().join("helpers.pkl"),
-    )
-    .unwrap();
-
-    // Create main config that imports from lib
+    // Test that the embedded module path works correctly
     let main_content = r#"
 module test
 
-import "modulepath:/karabiner.pkl" as karabiner
-import "modulepath:/helpers.pkl" as helpers
-import "modulepath:/lib/my_lib.pkl"
+import "modulepath:/karabiner_pkl/lib/karabiner.pkl" as karabiner
+import "modulepath:/karabiner_pkl/lib/helpers.pkl" as helpers
 
 simpleConfig: karabiner.SimpleConfig = new {
+  profileName = "test-profile"
   complex_modifications = new karabiner.ComplexModifications {
     rules = List(
-      my_lib.myCustomRule()
+      helpers.capsLockToEscape()
     )
   }
 }
@@ -94,50 +55,13 @@ simpleConfig: karabiner.SimpleConfig = new {
 config: karabiner.Config = simpleConfig.toConfig()
 "#;
 
-    let pkl_file = ctx.write_pkl_file("main.pkl", main_content);
+    let pkl_file = ctx.write_pkl_file("module_path_test.pkl", main_content);
+    let result = ctx
+        .compile_pkl_sync(&pkl_file, None)
+        .expect("Failed to compile with module path");
 
-    // We need to manually add the lib dir to module path for this test
-    let manifest_dir = env!("CARGO_MANIFEST_DIR");
-    let pkl_lib_dir = PathBuf::from(manifest_dir).join("pkl-lib");
-
-    let output = std::process::Command::new(&ctx.pkl_path)
-        .args(["eval", "--format=json"])
-        .arg("--module-path")
-        .arg(format!(
-            "{}:{}:{}",
-            pkl_lib_dir.display(),
-            lib_dir.display(),
-            ctx.temp_dir.path().display()
-        ))
-        .arg(&pkl_file)
-        .output()
-        .expect("Failed to run pkl");
-
-    if !output.status.success() {
-        eprintln!(
-            "Command: {:?}",
-            std::process::Command::new(&ctx.pkl_path)
-                .args(["eval", "--format=json"])
-                .arg("--module-path")
-                .arg(format!(
-                    "{}:{}:{}",
-                    pkl_lib_dir.display(),
-                    lib_dir.display(),
-                    ctx.temp_dir.path().display()
-                ))
-                .arg(&pkl_file)
-        );
-        eprintln!("Working dir: {:?}", ctx.temp_dir.path());
-        eprintln!(
-            "Lib dir contents: {:?}",
-            std::fs::read_dir(&lib_dir).unwrap().collect::<Vec<_>>()
-        );
-        panic!("Pkl failed: {}", String::from_utf8_lossy(&output.stderr));
-    }
-
-    let result: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
-
-    // Verify the imported rule is present
-    let rule = &result["config"]["profiles"][0]["complex_modifications"]["rules"][0];
-    assert_eq!(rule["description"], "Custom rule from library");
+    // Verify the compilation worked and profile name was used
+    assert_eq!(result["profiles"][0]["name"], "test-profile");
+    let rule = &result["profiles"][0]["complex_modifications"]["rules"][0];
+    assert_eq!(rule["description"], "Caps Lock to Escape");
 }

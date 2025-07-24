@@ -7,10 +7,10 @@ fn test_shell_commands() {
 
     let pkl_file = ctx.write_pkl_file("shell_commands.pkl", &fixture_content);
     let result = ctx
-        .compile_pkl_to_json(&pkl_file)
+        .compile_pkl_sync(&pkl_file, None)
         .expect("Failed to compile");
 
-    let rule = &result["config"]["profiles"][0]["complex_modifications"]["rules"][0];
+    let rule = &result["profiles"][0]["complex_modifications"]["rules"][0];
     let manipulators = rule["manipulators"].as_array().unwrap();
 
     // Test yabai space focus command
@@ -39,8 +39,8 @@ fn test_app_switcher_with_shell_commands() {
     let pkl_content = r#"
 module test
 
-import "karabiner.pkl" as karabiner
-import "helpers.pkl" as helpers
+import "modulepath:/karabiner_pkl/lib/karabiner.pkl" as karabiner
+import "modulepath:/karabiner_pkl/lib/helpers.pkl" as helpers
 
 simpleConfig: karabiner.SimpleConfig = new {
   complex_modifications = new karabiner.ComplexModifications {
@@ -59,10 +59,10 @@ config: karabiner.Config = simpleConfig.toConfig()
 
     let pkl_file = ctx.write_pkl_file("app_switcher_test.pkl", pkl_content);
     let result = ctx
-        .compile_pkl_to_json(&pkl_file)
+        .compile_pkl_sync(&pkl_file, None)
         .expect("Failed to compile");
 
-    let rule = &result["config"]["profiles"][0]["complex_modifications"]["rules"][0];
+    let rule = &result["profiles"][0]["complex_modifications"]["rules"][0];
     assert_eq!(rule["description"], "App Switcher: left_command + key");
 
     let manipulators = rule["manipulators"].as_array().unwrap();

@@ -22,30 +22,80 @@ Creates a new Compiler instance.
 
 **Side Effects:**
 - Extracts embedded Pkl library to temporary directory
-- Creates Karabiner config directory if missing
 
 #### Methods
 
 ##### `compile`
 
 ```rust
-pub fn compile(&self, config_path: &Path) -> Result<()>
+pub async fn compile(&self, config_path: &Path, profile_name: Option<&str>) -> Result<Value>
 ```
 
-Compiles a Pkl configuration file to Karabiner JSON.
+Compiles a Pkl configuration file to JSON.
 
 **Parameters:**
 - `config_path`: Path to the .pkl configuration file
+- `profile_name`: Optional profile name override
 
 **Returns:**
-- `Ok(())` on successful compilation
+- `Ok(Value)` containing the compiled JSON on success
 - `Err(KarabinerPklError)` on failure
 
 **Process:**
 1. Reads the Pkl file
 2. Invokes pkl CLI with proper module paths
-3. Validates the output JSON structure
-4. Writes to `~/.config/karabiner/karabiner.json`
+3. Applies profile name override if provided
+4. Returns JSON (no file I/O)
+
+## CLI API
+
+### `karabiner_pkl::cli`
+
+CLI module functions for file operations and configuration management.
+
+#### Functions
+
+##### `merge_configurations`
+
+```rust
+pub fn merge_configurations(existing_path: &Path, new_config: Value) -> Result<Value>
+```
+
+Merges a new profile configuration into an existing Karabiner JSON file.
+
+**Parameters:**
+- `existing_path`: Path to existing karabiner.json file
+- `new_config`: New configuration to merge
+
+**Returns:**
+- `Ok(Value)` containing merged configuration
+- `Err(KarabinerPklError)` on failure
+
+**Behavior:**
+- Preserves all existing profiles
+- Updates profile if name matches
+- Adds new profile if name doesn't exist
+- New profiles are added with `selected: false`
+
+##### `write_karabiner_config`
+
+```rust
+pub fn write_karabiner_config(path: &Path, config: &Value) -> Result<()>
+```
+
+Writes a Karabiner configuration to file.
+
+**Parameters:**
+- `path`: Output file path
+- `config`: Configuration JSON to write
+
+**Returns:**
+- `Ok(())` on success
+- `Err(KarabinerPklError)` on failure
+
+**Side Effects:**
+- Creates parent directories if missing
+- Writes formatted JSON to file
 
 ## Daemon API
 
@@ -87,22 +137,31 @@ Starts the file watching daemon.
 ##### `stop`
 
 ```rust
-pub async fn stop(&self)
+pub async fn stop(&self) -> Result<()>
 ```
 
 Stops the daemon gracefully.
 
+**Returns:**
+- `Ok(())` on successful shutdown
+
 ##### `compile_once`
 
 ```rust
-pub async fn compile_once(&self) -> Result<()>
+pub async fn compile_once(&self, profile_name: Option<&str>, output_path: Option<&str>) -> Result<()>
 ```
 
 Performs a one-time compilation without starting the watcher.
 
+**Parameters:**
+- `profile_name`: Optional profile name override (unused)
+- `output_path`: Optional output path (unused)
+
 **Returns:**
 - `Ok(())` on successful compilation
 - `Err(KarabinerPklError)` on failure
+
+**Note:** This method is currently unused and may be removed in future versions.
 
 ## Import API
 
@@ -126,7 +185,7 @@ Creates a new Importer instance.
 ##### `import`
 
 ```rust
-pub async fn import(&self, source: &str, name: Option<&str>) -> Result<()>
+pub async fn import(&self, source: &str, name: Option<String>) -> Result<()>
 ```
 
 Imports a Pkl module from a file path or URL.
@@ -147,24 +206,24 @@ Imports a Pkl module from a file path or URL.
 ##### `list_imports`
 
 ```rust
-pub fn list_imports(&self) -> Result<Vec<PathBuf>>
+pub fn list_imports(&self) -> Result<Vec<String>>
 ```
 
 Lists all imported .pkl files in the library directory.
 
 **Returns:**
-- `Ok(Vec<PathBuf>)` with paths to all .pkl files
+- `Ok(Vec<String>)` with filenames of all .pkl files
 - `Err(KarabinerPklError)` on directory read errors
 
 ##### `get_lib_dir`
 
 ```rust
-pub fn get_lib_dir() -> PathBuf
+pub fn get_lib_dir(&self) -> &Path
 ```
 
 Returns the path to the user's Pkl library directory.
 
-**Returns:** `~/.config/karabiner_pkl/lib/`
+**Returns:** Reference to the lib directory path (`~/.config/karabiner_pkl/lib/`)
 
 ## Error Types
 

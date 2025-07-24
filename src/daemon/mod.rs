@@ -1,8 +1,9 @@
+use crate::cli::{merge_configurations, write_karabiner_config};
 use crate::compiler::Compiler;
 use crate::error::{KarabinerPklError, Result};
-use crate::notifications::NotificationManager;
 use notify::RecursiveMode;
 use notify_debouncer_mini::{new_debouncer, DebouncedEventKind};
+use notify_rust::{Notification, Timeout};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
@@ -43,7 +44,7 @@ impl Daemon {
         info!("Starting karabiner-pkl daemon");
         info!("Watching: {}", self.config_path.display());
 
-        self.compile_and_notify(None, None).await;
+        self.compile_and_notify(None).await;
 
         let (tx, rx) = std::sync::mpsc::channel();
         let mut debouncer = new_debouncer(Duration::from_millis(300), tx)
@@ -60,10 +61,11 @@ impl Daemon {
         let config_path = self.config_path.clone();
         let is_running = self.is_running.clone();
 
+        // Spawn a task to handle file system events
         tokio::spawn(async move {
-            for res in rx {
-                match res {
-                    Ok(events) => {
+            loop {
+                match rx.recv() {
+                    Ok(Ok(events)) => {
                         for event in events {
                             if event.kind == DebouncedEventKind::Any
                                 && event.path.ends_with("karabiner.pkl")
@@ -74,14 +76,16 @@ impl Daemon {
                                     &notification_manager,
                                     &config_path,
                                     None, // No profile override for daemon watch mode
-                                    None, // No output override for daemon watch mode
                                 )
                                 .await;
                             }
                         }
                     }
-                    Err(e) => {
+                    Ok(Err(e)) => {
                         error!("Watch error: {:?}", e);
+                    }
+                    Err(e) => {
+                        error!("Channel receive error: {:?}", e);
                     }
                 }
 
@@ -91,6 +95,7 @@ impl Daemon {
             }
         });
 
+        info!("Daemon started successfully");
         Ok(())
     }
 
@@ -101,22 +106,22 @@ impl Daemon {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub async fn compile_once(
         &self,
         profile_name: Option<&str>,
-        output_path: Option<&str>,
+        _output_path: Option<&str>,
     ) -> Result<()> {
-        self.compile_and_notify(profile_name, output_path).await;
+        self.compile_and_notify(profile_name).await;
         Ok(())
     }
 
-    async fn compile_and_notify(&self, profile_name: Option<&str>, output_path: Option<&str>) {
+    async fn compile_and_notify(&self, profile_name: Option<&str>) {
         Self::compile_with_notification(
             &self.compiler,
             &self.notification_manager,
             &self.config_path,
             profile_name,
-            output_path,
         )
         .await;
     }
@@ -126,21 +131,83 @@ impl Daemon {
         notification_manager: &Arc<NotificationManager>,
         config_path: &Path,
         profile_name: Option<&str>,
-        output_path: Option<&str>,
     ) {
-        match compiler
-            .compile(config_path, profile_name, output_path)
-            .await
-        {
-            Ok(_) => {
-                info!("Successfully compiled configuration");
-                notification_manager.send_success("Karabiner configuration updated");
+        match compiler.compile(config_path, profile_name).await {
+            Ok(config) => {
+                // Write to default location
+                let home = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
+                let output_path = home.join(".config/karabiner/karabiner.json");
+
+                // Merge with existing if present
+                let final_config = if output_path.exists() {
+                    match merge_configurations(&output_path, config) {
+                        Ok(merged) => merged,
+                        Err(e) => {
+                            error!("Failed to merge configurations: {:?}", e);
+                            notification_manager.send_error(&format!("Merge failed: {e}"));
+                            return;
+                        }
+                    }
+                } else {
+                    config
+                };
+
+                // Write the configuration
+                match write_karabiner_config(&output_path, &final_config) {
+                    Ok(_) => {
+                        info!("Successfully compiled configuration");
+                        notification_manager.send_success("Karabiner configuration updated");
+                    }
+                    Err(e) => {
+                        error!("Failed to write configuration: {:?}", e);
+                        notification_manager.send_error(&format!("Write failed: {e}"));
+                    }
+                }
             }
             Err(e) => {
                 error!("Compilation failed: {:?}", e);
                 let error_msg = format!("Compilation failed: {e}");
                 notification_manager.send_error(&error_msg);
             }
+        }
+    }
+}
+
+// Notification Manager implementation
+
+struct NotificationManager {
+    app_name: String,
+}
+
+impl NotificationManager {
+    pub fn new() -> Self {
+        Self {
+            app_name: "Karabiner-Pkl".to_string(),
+        }
+    }
+
+    pub fn send_success(&self, message: &str) {
+        self.send_notification("✅ Success", message, false);
+    }
+
+    pub fn send_error(&self, message: &str) {
+        self.send_notification("❌ Error", message, true);
+    }
+
+    fn send_notification(&self, title: &str, message: &str, is_error: bool) {
+        let result = Notification::new()
+            .appname(&self.app_name)
+            .summary(title)
+            .body(message)
+            .timeout(if is_error {
+                Timeout::Never
+            } else {
+                Timeout::Milliseconds(3000)
+            })
+            .show();
+
+        if let Err(e) = result {
+            error!("Failed to send notification: {}", e);
         }
     }
 }

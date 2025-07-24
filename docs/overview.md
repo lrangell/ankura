@@ -6,22 +6,40 @@ Karabiner-Pkl is a configuration tool for [Karabiner-Elements](https://karabiner
 
 ```
 ┌─────────────────┐     ┌──────────────┐     ┌─────────────────┐
-│   CLI Entry     │────▶│    Daemon    │────▶│   Compiler      │
-│  (src/main.rs)  │     │ (src/daemon) │     │(src/compiler)   │
+│   Main Entry    │────▶│     CLI      │────▶│    Compiler     │
+│  (src/main.rs)  │     │ (src/cli.rs) │     │(src/compiler)   │
 └─────────────────┘     └──────────────┘     └─────────────────┘
-         │                      │                      │
-         │                      │                      ▼
-         │                      │              ┌──────────────┐
-         │                      │              │  Pkl CLI     │
-         │                      │              │ (external)   │
-         │                      │              └──────────────┘
-         │                      │                      │
-         ▼                      ▼                      ▼
-┌─────────────────┐     ┌──────────────┐     ┌─────────────────┐
-│ Notifications   │     │File Watching │     │   Pkl Library   │
-│(src/notifications)    │  (notify)    │     │  (pkl-lib/)     │
-└─────────────────┘     └──────────────┘     └─────────────────┘
+                               │                      │
+                               │                      ▼
+                               │              ┌──────────────┐
+                               │              │  Pkl CLI     │
+                               │              │ (external)   │
+                               │              └──────────────┘
+                               │                      │
+                               ▼                      ▼
+                        ┌──────────────┐     ┌─────────────────┐
+                        │    Daemon    │     │ Embedded Pkl    │
+                        │ (src/daemon) │     │   Library       │
+                        └──────────────┘     └─────────────────┘
+                               │
+                               ▼
+                        ┌──────────────┐
+                        │ Notifications│
+                        │  (in daemon) │
+                        └──────────────┘
 ```
+
+### Key Architectural Changes
+
+1. **Separation of Concerns**:
+   - `main.rs`: Simple initialization and command dispatch only
+   - `cli.rs`: All CLI command implementations and file I/O operations
+   - `compiler/`: Pure compilation logic - takes Pkl files, returns JSON
+   - `daemon/`: File watching and notifications (merged)
+
+2. **No File I/O in Compiler**: The compiler module only handles Pkl-to-JSON transformation
+3. **Embedded Resources**: Pkl library files are embedded directly in the compiler module
+4. **Consolidated Modules**: Notifications are now part of the daemon module
 
 ## Key Features
 
@@ -38,15 +56,16 @@ Karabiner-Pkl is a configuration tool for [Karabiner-Elements](https://karabiner
 ```
 karabiner-pkl/
 ├── src/                    # Rust source code
-│   ├── main.rs            # Entry point
-│   ├── cli.rs             # Command-line interface
-│   ├── compiler/          # Pkl compilation logic
-│   ├── daemon/            # File watching daemon
+│   ├── main.rs            # Simple entry point (init & dispatch)
+│   ├── cli.rs             # CLI commands and file I/O operations
+│   ├── compiler/          # Pure Pkl compilation logic
+│   │   └── mod.rs         # Compiler + embedded resources
+│   ├── daemon/            # File watching + notifications
+│   │   └── mod.rs         # Daemon + NotificationManager
 │   ├── error.rs           # Error types and handling
 │   ├── import/            # Module import functionality
-│   ├── notifications/     # macOS notifications
 │   ├── logging.rs         # Structured logging
-│   └── embedded.rs        # Embedded Pkl resources
+│   └── lib.rs             # Library exports
 ├── pkl-lib/               # Pkl type definitions
 │   ├── karabiner.pkl      # Core types and SimpleConfig API
 │   └── helpers.pkl        # Helper functions and constants
@@ -55,7 +74,6 @@ karabiner-pkl/
 │   ├── helpers/           # Test utilities
 │   └── integration/       # Integration tests
 ├── docs/                  # Documentation
-├── scripts/               # Development scripts
 └── Cargo.toml            # Rust project configuration
 ```
 
@@ -69,11 +87,12 @@ karabiner-pkl/
 
 ## Design Principles
 
-- **Simplicity**: Single "Default" profile approach - no multi-profile complexity
+- **Simplicity**: Default "pkl" profile approach with customizable profile names
 - **Type Safety**: Leverage Pkl's type system to catch errors at compile time
 - **Composability**: Build complex behaviors from simple, reusable functions
 - **User Feedback**: Clear error messages with source locations and recovery suggestions
 - **Reliability**: Graceful error handling ensures the daemon stays running
+- **Separation of Concerns**: Compiler returns JSON, CLI handles files, daemon manages watching
 
 ## Dependencies
 

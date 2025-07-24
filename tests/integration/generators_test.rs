@@ -7,8 +7,8 @@ fn test_char_range() {
     let pkl_content = r#"
 module test
 
-import "karabiner.pkl" as karabiner
-import "helpers.pkl" as helpers
+import "modulepath:/karabiner_pkl/lib/karabiner.pkl" as karabiner
+import "modulepath:/karabiner_pkl/lib/helpers.pkl" as helpers
 
 // Test char range generation
 letters = helpers.charRange("a", "e")
@@ -36,10 +36,10 @@ config: karabiner.Config = simpleConfig.toConfig()
 
     let pkl_file = ctx.write_pkl_file("char_range_test.pkl", pkl_content);
     let result = ctx
-        .compile_pkl_to_json(&pkl_file)
+        .compile_pkl_sync(&pkl_file, None)
         .expect("Failed to compile");
 
-    let rule = &result["config"]["profiles"][0]["complex_modifications"]["rules"][0];
+    let rule = &result["profiles"][0]["complex_modifications"]["rules"][0];
     assert_eq!(rule["description"], "Test Char Range: a,b,c,d,e");
 
     let manipulators = rule["manipulators"].as_array().unwrap();
@@ -55,8 +55,8 @@ fn test_num_range() {
     let pkl_content = r#"
 module test
 
-import "karabiner.pkl" as karabiner
-import "helpers.pkl" as helpers
+import "modulepath:/karabiner_pkl/lib/karabiner.pkl" as karabiner
+import "modulepath:/karabiner_pkl/lib/helpers.pkl" as helpers
 
 // Test number range generation
 nums = helpers.numRange(1, 5)
@@ -83,10 +83,10 @@ config: karabiner.Config = simpleConfig.toConfig()
 
     let pkl_file = ctx.write_pkl_file("num_range_test.pkl", pkl_content);
     let result = ctx
-        .compile_pkl_to_json(&pkl_file)
+        .compile_pkl_sync(&pkl_file, None)
         .expect("Failed to compile");
 
-    let rule = &result["config"]["profiles"][0]["complex_modifications"]["rules"][0];
+    let rule = &result["profiles"][0]["complex_modifications"]["rules"][0];
     assert_eq!(rule["description"], "Test Num Range: 1,2,3,4,5");
 
     let manipulators = rule["manipulators"].as_array().unwrap();
@@ -102,8 +102,8 @@ fn test_qwerty_sequence() {
     let pkl_content = r#"
 module test
 
-import "karabiner.pkl" as karabiner
-import "helpers.pkl" as helpers
+import "modulepath:/karabiner_pkl/lib/karabiner.pkl" as karabiner
+import "modulepath:/karabiner_pkl/lib/helpers.pkl" as helpers
 
 // Test QWERTY sequence generation
 homeRowRight = helpers.qwertySequence("j", 4)  // j, k, l, ;
@@ -130,10 +130,10 @@ config: karabiner.Config = simpleConfig.toConfig()
 
     let pkl_file = ctx.write_pkl_file("qwerty_sequence_test.pkl", pkl_content);
     let result = ctx
-        .compile_pkl_to_json(&pkl_file)
+        .compile_pkl_sync(&pkl_file, None)
         .expect("Failed to compile");
 
-    let rule = &result["config"]["profiles"][0]["complex_modifications"]["rules"][0];
+    let rule = &result["profiles"][0]["complex_modifications"]["rules"][0];
     assert_eq!(rule["description"], "QWERTY Sequence: j k l ;");
 
     let manipulators = rule["manipulators"].as_array().unwrap();
@@ -151,8 +151,8 @@ fn test_vim_home_row_navigation() {
     let pkl_content = r#"
 module test
 
-import "karabiner.pkl" as karabiner
-import "helpers.pkl" as helpers
+import "modulepath:/karabiner_pkl/lib/karabiner.pkl" as karabiner
+import "modulepath:/karabiner_pkl/lib/helpers.pkl" as helpers
 
 // Test vim home row navigation helper
 vimNav = helpers.vimHomeRowNavigation()
@@ -170,10 +170,10 @@ config: karabiner.Config = simpleConfig.toConfig()
 
     let pkl_file = ctx.write_pkl_file("vim_home_row_test.pkl", pkl_content);
     let result = ctx
-        .compile_pkl_to_json(&pkl_file)
+        .compile_pkl_sync(&pkl_file, None)
         .expect("Failed to compile");
 
-    let rule = &result["config"]["profiles"][0]["complex_modifications"]["rules"][0];
+    let rule = &result["profiles"][0]["complex_modifications"]["rules"][0];
     let manipulators = rule["manipulators"].as_array().unwrap();
 
     // Find the h -> left_arrow mapping

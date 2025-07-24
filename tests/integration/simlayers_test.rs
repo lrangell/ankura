@@ -7,8 +7,8 @@ fn test_simple_layer() {
     let pkl_content = r#"
 module test
 
-import "karabiner.pkl" as karabiner
-import "helpers.pkl" as helpers
+import "modulepath:/karabiner_pkl/lib/karabiner.pkl" as karabiner
+import "modulepath:/karabiner_pkl/lib/helpers.pkl" as helpers
 
 simpleConfig: karabiner.SimpleConfig = new {
   complex_modifications = new karabiner.ComplexModifications {
@@ -28,10 +28,10 @@ config: karabiner.Config = simpleConfig.toConfig()
 
     let pkl_file = ctx.write_pkl_file("layer_test.pkl", pkl_content);
     let result = ctx
-        .compile_pkl_to_json(&pkl_file)
+        .compile_pkl_sync(&pkl_file, None)
         .expect("Failed to compile");
 
-    let rule = &result["config"]["profiles"][0]["complex_modifications"]["rules"][0];
+    let rule = &result["profiles"][0]["complex_modifications"]["rules"][0];
     assert_eq!(rule["description"], "Simlayer: d + key");
 
     // Check that manipulators were created for each key
@@ -51,15 +51,15 @@ fn test_multiple_layers() {
 
     let pkl_file = ctx.write_pkl_file("fixture_simlayers.pkl", &fixture_content);
     let result = ctx
-        .compile_pkl_to_json(&pkl_file)
+        .compile_pkl_sync(&pkl_file, None)
         .expect("Failed to compile fixture");
 
-    let rules = result["config"]["profiles"][0]["complex_modifications"]["rules"]
+    let rules = result["profiles"][0]["complex_modifications"]["rules"]
         .as_array()
         .unwrap();
     assert_eq!(rules.len(), 2); // D-mode and F-mode
 
     // Check parameters were set
-    let params = &result["config"]["profiles"][0]["complex_modifications"]["parameters"];
+    let params = &result["profiles"][0]["complex_modifications"]["parameters"];
     assert_eq!(params["basic.simultaneous_threshold_milliseconds"], 200);
 }

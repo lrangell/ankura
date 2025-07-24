@@ -258,6 +258,7 @@ A simplified interface that abstracts away profile management.
 
 ```pkl
 class SimpleConfig {
+  profileName: String = "pkl"
   simple_modifications: List<SimpleModification> = List()
   complex_modifications: ComplexModifications?
   parameters: Parameters?
@@ -265,7 +266,7 @@ class SimpleConfig {
   
   function toConfig(): Config = new Config {
     profiles = List(new Profile {
-      name = "Default"
+      name = profileName
       selected = true
       simple_modifications = simple_modifications
       complex_modifications = complex_modifications

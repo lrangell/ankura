@@ -4,14 +4,14 @@ This document provides detailed information about the core components of Karabin
 
 ## CLI Module (`src/cli.rs`)
 
-The CLI module defines the command-line interface using the `clap` crate.
+The CLI module defines the command-line interface and handles all file I/O operations.
 
 ### Structure
 
 ```rust
 struct Cli {
     command: Commands,
-    config: PathBuf,  // Path to Pkl config (default: ~/.config/karabiner.pkl)
+    config: String,   // Path to Pkl config (default: ~/.config/karabiner.pkl)
     debug: bool,      // Enable debug logging
 }
 ```
@@ -22,7 +22,7 @@ struct Cli {
 |---------|-------------|---------|
 | `start` | Start the daemon | `--foreground`: Run in foreground |
 | `stop` | Stop the daemon | - |
-| `compile` | Compile configuration once | - |
+| `compile` | Compile configuration once | `--profile-name`: Override profile name<br>`--output`: Custom output path |
 | `check` | Validate configuration | - |
 | `logs` | View daemon logs | `--lines N`: Show last N lines<br>`--follow`: Follow log output |
 | `status` | Check daemon status | - |
@@ -38,6 +38,12 @@ karabiner-pkl start
 # Compile configuration once
 karabiner-pkl compile
 
+# Compile with custom profile name
+karabiner-pkl compile --profile-name "Work"
+
+# Compile to specific output file
+karabiner-pkl compile --output ~/test-karabiner.json
+
 # Watch logs in real-time
 karabiner-pkl logs --follow
 
@@ -45,16 +51,29 @@ karabiner-pkl logs --follow
 karabiner-pkl add https://example.com/layers.pkl --name my-layers
 ```
 
+### Key Responsibilities
+
+1. **Command Implementation**: All command logic is in this module
+2. **File I/O Operations**: 
+   - Reading existing Karabiner configurations
+   - Writing compiled JSON output
+   - Merging configurations to preserve other profiles
+3. **Profile Management**: Handles profile preservation and merging
+
+### Key Functions
+
+- `merge_configurations(existing_path, new_config) -> Result<Value>`: Merges new profile into existing config
+- `write_karabiner_config(path, config) -> Result<()>`: Writes JSON to file
+
 ## Compiler Module (`src/compiler/mod.rs`)
 
-The Compiler handles Pkl to JSON compilation by invoking the external Pkl CLI.
+The Compiler is a pure transformation module that converts Pkl files to JSON without any file I/O.
 
 ### Key Components
 
 ```rust
 struct Compiler {
     pkl_path: PathBuf,              // Path to pkl binary
-    karabiner_config_dir: PathBuf,  // Output directory
     _embedded_temp_dir: TempDir,    // Keeps temp dir alive
     embedded_lib_path: PathBuf,     // Extracted pkl-lib path
 }
@@ -64,34 +83,39 @@ struct Compiler {
 
 1. **Initialization**
    - Locates Pkl CLI binary using `which`
-   - Creates Karabiner config directory if missing
    - Extracts embedded Pkl library to temp directory
+   - Sets up module paths
 
-2. **Compilation**
+2. **Pure Compilation**
+   - Takes a Pkl file path and optional profile name
    - Constructs module paths (embedded + user lib)
    - Invokes Pkl CLI with proper arguments
-   - Parses JSON output and extracts `config` field
-   - Validates configuration structure
+   - Returns JSON as `serde_json::Value`
+   - No file writing or directory creation
 
-3. **Validation**
-   - Ensures `profiles` array exists
-   - Verifies "Default" profile is present
-   - Checks JSON structure matches expectations
+3. **Profile Override**
+   - Can override profile name via CLI parameter
+   - Passes override to Pkl as external property
 
 4. **Error Handling**
    - Parses Pkl error output for location info
    - Creates rich diagnostics with source display
-   - Provides helpful error messages
+   - Returns errors without side effects
 
 ### Key Methods
 
 - `new() -> Result<Self>`: Creates compiler instance
-- `compile(&self, config_path: &Path) -> Result<()>`: Main compilation function
-- `validate_config(config: &Value) -> Result<()>`: Validates JSON structure
+- `compile(&self, config_path: &Path, profile_name: Option<&str>) -> Result<Value>`: Returns JSON
+
+### Embedded Resources
+
+The compiler module now includes embedded Pkl library files using `rust_embed`:
+- Extracts `karabiner.pkl` and `helpers.pkl` at runtime
+- Makes them available via `modulepath:/karabiner_pkl/lib/`
 
 ## Daemon Module (`src/daemon/mod.rs`)
 
-The Daemon provides file watching and auto-compilation functionality.
+The Daemon provides file watching, auto-compilation, and notification functionality.
 
 ### Architecture
 
@@ -101,6 +125,10 @@ struct Daemon {
     compiler: Arc<Compiler>,
     notification_manager: NotificationManager,
     is_running: Arc<RwLock<bool>>,
+}
+
+struct NotificationManager {
+    app_name: String,
 }
 ```
 
@@ -112,13 +140,15 @@ struct Daemon {
    - Filters events to only respond to modifications
 
 2. **Compilation Loop**
-   - Compiles on startup
-   - Recompiles on every file change
-   - Continues running on compilation errors
+   - Gets JSON from compiler
+   - Merges with existing configuration
+   - Writes to Karabiner config file
+   - Shows notifications for results
 
-3. **Notifications**
+3. **Integrated Notifications**
    - Success: "✅ Configuration compiled successfully"
    - Error: "❌ Configuration error: [details]"
+   - NotificationManager is now part of daemon module
 
 4. **Async Operation**
    - Runs on tokio runtime
@@ -127,10 +157,10 @@ struct Daemon {
 
 ### Key Methods
 
-- `new(config_path: PathBuf) -> Self`: Creates daemon instance
+- `new(config_path: PathBuf) -> Result<Self>`: Creates daemon with compiler and notifications
 - `start() -> Result<()>`: Starts file watching
-- `stop()`: Stops the daemon
-- `compile_once() -> Result<()>`: One-time compilation
+- `stop() -> Result<()>`: Stops the daemon
+- `compile_once(profile_name, output_path) -> Result<()>`: One-time compilation (unused)
 
 ## Error Module (`src/error.rs`)
 
@@ -192,13 +222,13 @@ Manages importing external Pkl modules.
 
 ### Key Methods
 
-- `new() -> Result<Self>`: Creates importer
-- `import(&self, source: &str, name: Option<&str>) -> Result<()>`: Import module
-- `list_imports() -> Result<Vec<PathBuf>>`: List imported modules
+- `new() -> Result<Self>`: Creates importer with lib directory setup
+- `import(&self, source: &str, name: Option<String>) -> Result<()>`: Import module
+- `list_imports() -> Result<Vec<String>>`: List imported modules
 
-## Notifications Module (`src/notifications/mod.rs`)
+## Notifications (in Daemon Module)
 
-Provides macOS native notifications for user feedback.
+Notification functionality is now integrated into the daemon module.
 
 ### Notification Types
 
@@ -219,10 +249,11 @@ Provides macOS native notifications for user feedback.
 - Uses `notify-rust` crate
 - Graceful fallback on failure
 - App name: "Karabiner-Pkl"
+- Managed by `NotificationManager` struct within daemon
 
-## Embedded Module (`src/embedded.rs`)
+## Embedded Resources (in Compiler Module)
 
-Embeds Pkl library files in the binary for distribution.
+Embedded Pkl library functionality is now integrated into the compiler module.
 
 ### Process
 
@@ -231,14 +262,24 @@ Embeds Pkl library files in the binary for distribution.
    - Files become part of binary
 
 2. **Runtime**
-   - Extracts to temp directory
+   - Extracts to temp directory during compiler initialization
    - Creates proper module structure
-   - Returns path for Pkl imports
+   - Available via `modulepath:/karabiner_pkl/lib/`
 
 ### Embedded Files
 
-- `karabiner.pkl`: Core type definitions
+- `karabiner.pkl`: Core type definitions (default profile: "pkl")
 - `helpers.pkl`: Helper functions and constants
+
+## Main Entry Point (`src/main.rs`)
+
+The main entry point is now simplified to only:
+1. Parse CLI arguments with clap
+2. Initialize logging
+3. Expand config path (tilde expansion)
+4. Dispatch to CLI module for execution
+
+All command implementations have been moved to the CLI module for better separation of concerns.
 
 ## Logging Module (`src/logging.rs`)
 
