@@ -110,7 +110,7 @@ impl TestContext {
                     let lines: Vec<&str> = error_str.lines().collect();
                     
                     // Look for the line with the caret
-                    for (_i, line) in lines.iter().enumerate() {
+                    for line in lines.iter() {
                         if line.contains('^') {
                             col = line.find('^').unwrap_or(0) + 1;
                             break;
@@ -147,57 +147,11 @@ impl TestContext {
         }
     }
     
-    pub fn assert_json_eq(&self, actual: &Value, expected: &Value) {
-        pretty_assertions::assert_eq!(
-            actual,
-            expected,
-            "JSON output doesn't match expected"
-        );
-    }
-    
     pub fn load_fixture(name: &str) -> String {
         let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("tests/fixtures")
             .join(name);
         std::fs::read_to_string(path)
-            .expect(&format!("Failed to load fixture: {}", name))
+            .unwrap_or_else(|_| panic!("Failed to load fixture: {}", name))
     }
-}
-
-// Helper to create a minimal valid config
-pub fn minimal_config() -> &'static str {
-    r#"module test_config
-
-import "@karabiner"
-import "@helpers"
-
-simpleConfig: karabiner.SimpleConfig = new {
-  simple_modifications = List {
-    helpers.remap("caps_lock", "escape")
-  }
-}
-
-config: karabiner.Config = simpleConfig.toConfig()
-"#
-}
-
-// Helper to create expected JSON for minimal config
-pub fn minimal_config_json() -> Value {
-    serde_json::json!({
-        "profiles": [{
-            "name": "Default",
-            "selected": true,
-            "simple_modifications": [{
-                "from": "caps_lock",
-                "to": "escape"
-            }],
-            "devices": [],
-            "fn_function_keys": [],
-            "complex_modifications": null,
-            "parameters": null,
-            "virtual_hid_keyboard": null
-        }],
-        "title": "Karabiner-Pkl Configuration",
-        "global": null
-    })
 }

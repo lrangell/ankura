@@ -3,7 +3,7 @@ use crate::error::{KarabinerPklError, Result};
 use crate::notifications::NotificationManager;
 use notify::RecursiveMode;
 use notify_debouncer_mini::{new_debouncer, DebouncedEventKind};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::RwLock;
@@ -116,7 +116,7 @@ impl Daemon {
     async fn compile_with_notification(
         compiler: &Arc<Compiler>,
         notification_manager: &Arc<NotificationManager>,
-        config_path: &PathBuf,
+        config_path: &Path,
     ) {
         match compiler.compile(config_path).await {
             Ok(_) => {

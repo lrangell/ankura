@@ -54,7 +54,7 @@ impl Importer {
 
         let filename = name.unwrap_or_else(|| {
             url.split('/')
-                .last()
+                .next_back()
                 .unwrap_or("imported.pkl")
                 .to_string()
         });

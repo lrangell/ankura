@@ -132,7 +132,7 @@ impl Compiler {
 
         self.validate_config(&config)?;
 
-        if !config.get("title").is_some() {
+        if config.get("title").is_none() {
             config["title"] = serde_json::json!("Karabiner-Pkl Generated Configuration");
         }
 
@@ -158,7 +158,7 @@ impl Compiler {
             });
         }
 
-        if !config.get("profiles").is_some() {
+        if config.get("profiles").is_none() {
             return Err(KarabinerPklError::ValidationError {
                 message: "Configuration must contain 'profiles' field".to_string(),
             });
@@ -200,7 +200,7 @@ impl Compiler {
                     let lines: Vec<&str> = error_str.lines().collect();
                     
                     // Look for the line with the caret
-                    for (_i, line) in lines.iter().enumerate() {
+                    for line in lines.iter() {
                         if line.contains('^') {
                             col = line.find('^').unwrap_or(0) + 1;
                             break;

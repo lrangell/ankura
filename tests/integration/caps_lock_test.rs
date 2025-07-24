@@ -44,5 +44,5 @@ fn test_caps_lock_in_fixtures() {
     
     // Verify the fixture compiles and produces expected output
     assert_eq!(result["config"]["profiles"][0]["name"], "Default");
-    assert!(result["config"]["profiles"][0]["complex_modifications"]["rules"].as_array().unwrap().len() > 0);
+    assert!(!result["config"]["profiles"][0]["complex_modifications"]["rules"].as_array().unwrap().is_empty());
 }

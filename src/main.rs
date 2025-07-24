@@ -10,7 +10,6 @@ use clap::Parser;
 use cli::{Cli, Commands};
 use daemon::Daemon;
 use error::Result;
-use miette;
 use std::path::PathBuf;
 use tracing::info;
 
