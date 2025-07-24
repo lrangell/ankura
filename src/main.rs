@@ -19,7 +19,7 @@ async fn main() -> miette::Result<()> {
     
     let log_file = logging::init_logging()
         .map_err(|e| error::KarabinerPklError::DaemonError {
-            message: format!("Failed to initialize logging: {}", e),
+            message: format!("Failed to initialize logging: {e}"),
         })?;
 
     let config_path = shellexpand::tilde(&cli.config).to_string();
@@ -66,7 +66,7 @@ async fn start_daemon(config_path: PathBuf, foreground: bool) -> Result<()> {
         tokio::signal::ctrl_c()
             .await
             .map_err(|e| error::KarabinerPklError::DaemonError {
-                message: format!("Failed to install signal handler: {}", e),
+                message: format!("Failed to install signal handler: {e}"),
             })?;
         daemon.stop().await?;
     } else {
@@ -74,7 +74,7 @@ async fn start_daemon(config_path: PathBuf, foreground: bool) -> Result<()> {
         tokio::signal::ctrl_c()
             .await
             .map_err(|e| error::KarabinerPklError::DaemonError {
-                message: format!("Failed to install signal handler: {}", e),
+                message: format!("Failed to install signal handler: {e}"),
             })?;
         daemon.stop().await?;
     }
@@ -119,7 +119,7 @@ fn show_logs(log_file: PathBuf, lines: usize, follow: bool) -> Result<()> {
             .arg(&log_file)
             .status()
             .map_err(|e| error::KarabinerPklError::DaemonError {
-                message: format!("Failed to tail logs: {}", e),
+                message: format!("Failed to tail logs: {e}"),
             })?;
     } else {
         Command::new("tail")
@@ -127,7 +127,7 @@ fn show_logs(log_file: PathBuf, lines: usize, follow: bool) -> Result<()> {
             .arg(&log_file)
             .status()
             .map_err(|e| error::KarabinerPklError::DaemonError {
-                message: format!("Failed to show logs: {}", e),
+                message: format!("Failed to show logs: {e}"),
             })?;
     }
     

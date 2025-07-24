@@ -93,7 +93,7 @@ impl Compiler {
             .arg(config_path)
             .output()
             .map_err(|e| KarabinerPklError::DaemonError {
-                message: format!("Failed to execute pkl: {}", e),
+                message: format!("Failed to execute pkl: {e}"),
             })?;
 
         if !output.status.success() {

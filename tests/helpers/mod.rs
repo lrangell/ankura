@@ -52,7 +52,7 @@ impl TestContext {
             .arg(&pkl_lib_dir)
             .arg(pkl_file)
             .output()
-            .map_err(|e| format!("Failed to execute pkl: {}", e))?;
+            .map_err(|e| format!("Failed to execute pkl: {e}"))?;
         
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
@@ -91,12 +91,12 @@ impl TestContext {
                 return Err(format!("{:?}", miette::Report::new(err)));
             }
             
-            return Err(format!("Pkl compilation failed: {}", stderr));
+            return Err(format!("Pkl compilation failed: {stderr}"));
         }
         
         let json_str = String::from_utf8_lossy(&output.stdout);
         serde_json::from_str(&json_str)
-            .map_err(|e| format!("Failed to parse JSON: {}", e))
+            .map_err(|e| format!("Failed to parse JSON: {e}"))
     }
     
     fn parse_pkl_error_span(error_str: &str, source_code: &str) -> Option<SourceSpan> {
@@ -152,6 +152,6 @@ impl TestContext {
             .join("tests/fixtures")
             .join(name);
         std::fs::read_to_string(path)
-            .unwrap_or_else(|_| panic!("Failed to load fixture: {}", name))
+            .unwrap_or_else(|_| panic!("Failed to load fixture: {name}"))
     }
 }

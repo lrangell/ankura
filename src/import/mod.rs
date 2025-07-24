@@ -36,7 +36,7 @@ impl Importer {
 
         let response = reqwest::get(url).await.map_err(|e| {
             KarabinerPklError::DaemonError {
-                message: format!("Failed to download file: {}", e),
+                message: format!("Failed to download file: {e}"),
             }
         })?;
 
@@ -48,7 +48,7 @@ impl Importer {
 
         let content = response.text().await.map_err(|e| {
             KarabinerPklError::DaemonError {
-                message: format!("Failed to read response: {}", e),
+                message: format!("Failed to read response: {e}"),
             }
         })?;
 
