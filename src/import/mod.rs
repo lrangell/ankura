@@ -13,11 +13,9 @@ impl Importer {
         })?;
         let lib_dir = home.join(".config/karabiner_pkl/lib");
 
-        std::fs::create_dir_all(&lib_dir).map_err(|e| {
-            KarabinerPklError::ConfigReadError {
-                path: lib_dir.clone(),
-                source: e,
-            }
+        std::fs::create_dir_all(&lib_dir).map_err(|e| KarabinerPklError::ConfigReadError {
+            path: lib_dir.clone(),
+            source: e,
         })?;
 
         Ok(Self { lib_dir })
@@ -34,11 +32,11 @@ impl Importer {
     async fn import_from_url(&self, url: &str, name: Option<String>) -> Result<()> {
         info!("Importing from URL: {}", url);
 
-        let response = reqwest::get(url).await.map_err(|e| {
-            KarabinerPklError::DaemonError {
+        let response = reqwest::get(url)
+            .await
+            .map_err(|e| KarabinerPklError::DaemonError {
                 message: format!("Failed to download file: {e}"),
-            }
-        })?;
+            })?;
 
         if !response.status().is_success() {
             return Err(KarabinerPklError::DaemonError {
@@ -46,11 +44,12 @@ impl Importer {
             });
         }
 
-        let content = response.text().await.map_err(|e| {
-            KarabinerPklError::DaemonError {
+        let content = response
+            .text()
+            .await
+            .map_err(|e| KarabinerPklError::DaemonError {
                 message: format!("Failed to read response: {e}"),
-            }
-        })?;
+            })?;
 
         let filename = name.unwrap_or_else(|| {
             url.split('/')
@@ -66,16 +65,17 @@ impl Importer {
         }
 
         let target_path = self.lib_dir.join(&filename);
-        
+
         if target_path.exists() {
-            warn!("File {} already exists in lib directory. Overwriting.", filename);
+            warn!(
+                "File {} already exists in lib directory. Overwriting.",
+                filename
+            );
         }
 
-        std::fs::write(&target_path, content).map_err(|e| {
-            KarabinerPklError::ConfigWriteError {
-                path: target_path.clone(),
-                source: e,
-            }
+        std::fs::write(&target_path, content).map_err(|e| KarabinerPklError::ConfigWriteError {
+            path: target_path.clone(),
+            source: e,
         })?;
 
         info!("Successfully imported {} to {}", url, target_path.display());
@@ -84,14 +84,11 @@ impl Importer {
 
     fn import_from_file(&self, path: &str, name: Option<String>) -> Result<()> {
         let source_path = Path::new(path);
-        
+
         if !source_path.exists() {
             return Err(KarabinerPklError::ConfigReadError {
                 path: source_path.to_path_buf(),
-                source: std::io::Error::new(
-                    std::io::ErrorKind::NotFound,
-                    "Source file not found",
-                ),
+                source: std::io::Error::new(std::io::ErrorKind::NotFound, "Source file not found"),
             });
         }
 
@@ -110,9 +107,12 @@ impl Importer {
         });
 
         let target_path = self.lib_dir.join(&filename);
-        
+
         if target_path.exists() {
-            warn!("File {} already exists in lib directory. Overwriting.", filename);
+            warn!(
+                "File {} already exists in lib directory. Overwriting.",
+                filename
+            );
         }
 
         std::fs::copy(source_path, &target_path).map_err(|e| {
@@ -122,7 +122,11 @@ impl Importer {
             }
         })?;
 
-        info!("Successfully imported {} to {}", path, target_path.display());
+        info!(
+            "Successfully imported {} to {}",
+            path,
+            target_path.display()
+        );
         Ok(())
     }
 
@@ -134,20 +138,19 @@ impl Importer {
     #[allow(dead_code)]
     pub fn list_imports(&self) -> Result<Vec<String>> {
         let mut files = Vec::new();
-        
-        let entries = std::fs::read_dir(&self.lib_dir).map_err(|e| {
-            KarabinerPklError::ConfigReadError {
+
+        let entries =
+            std::fs::read_dir(&self.lib_dir).map_err(|e| KarabinerPklError::ConfigReadError {
                 path: self.lib_dir.clone(),
                 source: e,
-            }
-        })?;
+            })?;
 
         for entry in entries {
             let entry = entry.map_err(|e| KarabinerPklError::ConfigReadError {
                 path: self.lib_dir.clone(),
                 source: e,
             })?;
-            
+
             let path = entry.path();
             if path.extension().and_then(|s| s.to_str()) == Some("pkl") {
                 if let Some(filename) = path.file_name().and_then(|s| s.to_str()) {

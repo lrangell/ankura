@@ -3,7 +3,7 @@ use crate::helpers::TestContext;
 #[test]
 fn test_char_range() {
     let ctx = TestContext::new();
-    
+
     let pkl_content = r#"
 module test
 
@@ -33,13 +33,15 @@ simpleConfig: karabiner.SimpleConfig = new {
 
 config: karabiner.Config = simpleConfig.toConfig()
 "#;
-    
+
     let pkl_file = ctx.write_pkl_file("char_range_test.pkl", pkl_content);
-    let result = ctx.compile_pkl_to_json(&pkl_file).expect("Failed to compile");
-    
+    let result = ctx
+        .compile_pkl_to_json(&pkl_file)
+        .expect("Failed to compile");
+
     let rule = &result["config"]["profiles"][0]["complex_modifications"]["rules"][0];
     assert_eq!(rule["description"], "Test Char Range: a,b,c,d,e");
-    
+
     let manipulators = rule["manipulators"].as_array().unwrap();
     assert_eq!(manipulators.len(), 5);
     assert_eq!(manipulators[0]["from"]["key_code"], "a");
@@ -49,7 +51,7 @@ config: karabiner.Config = simpleConfig.toConfig()
 #[test]
 fn test_num_range() {
     let ctx = TestContext::new();
-    
+
     let pkl_content = r#"
 module test
 
@@ -78,13 +80,15 @@ simpleConfig: karabiner.SimpleConfig = new {
 
 config: karabiner.Config = simpleConfig.toConfig()
 "#;
-    
+
     let pkl_file = ctx.write_pkl_file("num_range_test.pkl", pkl_content);
-    let result = ctx.compile_pkl_to_json(&pkl_file).expect("Failed to compile");
-    
+    let result = ctx
+        .compile_pkl_to_json(&pkl_file)
+        .expect("Failed to compile");
+
     let rule = &result["config"]["profiles"][0]["complex_modifications"]["rules"][0];
     assert_eq!(rule["description"], "Test Num Range: 1,2,3,4,5");
-    
+
     let manipulators = rule["manipulators"].as_array().unwrap();
     assert_eq!(manipulators.len(), 5);
     assert_eq!(manipulators[0]["from"]["key_code"], "1");
@@ -94,7 +98,7 @@ config: karabiner.Config = simpleConfig.toConfig()
 #[test]
 fn test_qwerty_sequence() {
     let ctx = TestContext::new();
-    
+
     let pkl_content = r#"
 module test
 
@@ -123,13 +127,15 @@ simpleConfig: karabiner.SimpleConfig = new {
 
 config: karabiner.Config = simpleConfig.toConfig()
 "#;
-    
+
     let pkl_file = ctx.write_pkl_file("qwerty_sequence_test.pkl", pkl_content);
-    let result = ctx.compile_pkl_to_json(&pkl_file).expect("Failed to compile");
-    
+    let result = ctx
+        .compile_pkl_to_json(&pkl_file)
+        .expect("Failed to compile");
+
     let rule = &result["config"]["profiles"][0]["complex_modifications"]["rules"][0];
     assert_eq!(rule["description"], "QWERTY Sequence: j k l ;");
-    
+
     let manipulators = rule["manipulators"].as_array().unwrap();
     assert_eq!(manipulators.len(), 4);
     assert_eq!(manipulators[0]["from"]["key_code"], "j");
@@ -141,7 +147,7 @@ config: karabiner.Config = simpleConfig.toConfig()
 #[test]
 fn test_vim_home_row_navigation() {
     let ctx = TestContext::new();
-    
+
     let pkl_content = r#"
 module test
 
@@ -161,18 +167,26 @@ simpleConfig: karabiner.SimpleConfig = new {
 
 config: karabiner.Config = simpleConfig.toConfig()
 "#;
-    
+
     let pkl_file = ctx.write_pkl_file("vim_home_row_test.pkl", pkl_content);
-    let result = ctx.compile_pkl_to_json(&pkl_file).expect("Failed to compile");
-    
+    let result = ctx
+        .compile_pkl_to_json(&pkl_file)
+        .expect("Failed to compile");
+
     let rule = &result["config"]["profiles"][0]["complex_modifications"]["rules"][0];
     let manipulators = rule["manipulators"].as_array().unwrap();
-    
+
     // Find the h -> left_arrow mapping
-    let h_mapping = manipulators.iter().find(|m| m["from"]["key_code"] == "h").unwrap();
+    let h_mapping = manipulators
+        .iter()
+        .find(|m| m["from"]["key_code"] == "h")
+        .unwrap();
     assert_eq!(h_mapping["to"][0]["key_code"], "left_arrow");
-    
+
     // Find the j -> down_arrow mapping
-    let j_mapping = manipulators.iter().find(|m| m["from"]["key_code"] == "j").unwrap();
+    let j_mapping = manipulators
+        .iter()
+        .find(|m| m["from"]["key_code"] == "j")
+        .unwrap();
     assert_eq!(j_mapping["to"][0]["key_code"], "down_arrow");
 }

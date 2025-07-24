@@ -50,7 +50,7 @@ impl Compiler {
             message: "Could not find home directory".to_string(),
         })?;
         let lib_dir = home.join(".config/karabiner_pkl/lib");
-        
+
         // Find the pkl-lib directory (either from installed location or development)
         let pkl_lib_dir = if let Ok(exe_path) = std::env::current_exe() {
             // Check if we're in development (cargo run)
@@ -59,7 +59,7 @@ impl Compiler {
                 .and_then(|p| p.parent())
                 .and_then(|p| p.parent())
                 .map(|p| p.join("pkl-lib"));
-            
+
             if dev_pkl_lib.as_ref().map(|p| p.exists()).unwrap_or(false) {
                 dev_pkl_lib
             } else {
@@ -72,29 +72,30 @@ impl Compiler {
 
         let mut pkl_command = Command::new(&self.pkl_path);
         pkl_command.args(["eval", "--format=json"]);
-        
+
         // Add module paths
         let mut module_paths = vec![];
-        
+
         if let Some(pkl_lib) = pkl_lib_dir.as_ref().filter(|p| p.exists()) {
             module_paths.push(pkl_lib.to_string_lossy().to_string());
         }
-        
+
         if lib_dir.exists() {
             module_paths.push(lib_dir.to_string_lossy().to_string());
         }
-        
+
         if !module_paths.is_empty() {
             pkl_command.arg("--module-path");
             pkl_command.arg(module_paths.join(":"));
         }
 
-        let output = pkl_command
-            .arg(config_path)
-            .output()
-            .map_err(|e| KarabinerPklError::DaemonError {
-                message: format!("Failed to execute pkl: {e}"),
-            })?;
+        let output =
+            pkl_command
+                .arg(config_path)
+                .output()
+                .map_err(|e| KarabinerPklError::DaemonError {
+                    message: format!("Failed to execute pkl: {e}"),
+                })?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
@@ -118,7 +119,7 @@ impl Compiler {
             } else {
                 stderr.to_string()
             };
-            
+
             return Err(KarabinerPklError::PklCompileError {
                 help: error_msg,
                 source_code: source,
@@ -147,7 +148,10 @@ impl Compiler {
             }
         })?;
 
-        info!("Successfully wrote configuration to {}", karabiner_json_path.display());
+        info!(
+            "Successfully wrote configuration to {}",
+            karabiner_json_path.display()
+        );
         Ok(())
     }
 
@@ -198,7 +202,7 @@ impl Compiler {
                     // Find the column by looking for the caret (^) in the error output
                     let mut col = 1;
                     let lines: Vec<&str> = error_str.lines().collect();
-                    
+
                     // Look for the line with the caret
                     for line in lines.iter() {
                         if line.contains('^') {
@@ -206,7 +210,7 @@ impl Compiler {
                             break;
                         }
                     }
-                    
+
                     // Calculate the byte offset in the source
                     let mut offset = 0;
                     for (idx, line) in source_code.lines().enumerate() {
@@ -216,7 +220,7 @@ impl Compiler {
                         }
                         offset += line.len() + 1; // +1 for newline
                     }
-                    
+
                     return Some(miette::SourceSpan::new(offset.into(), 1));
                 }
             }

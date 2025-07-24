@@ -16,11 +16,10 @@ use tracing::info;
 #[tokio::main]
 async fn main() -> miette::Result<()> {
     let cli = Cli::parse();
-    
-    let log_file = logging::init_logging()
-        .map_err(|e| error::KarabinerPklError::DaemonError {
-            message: format!("Failed to initialize logging: {e}"),
-        })?;
+
+    let log_file = logging::init_logging().map_err(|e| error::KarabinerPklError::DaemonError {
+        message: format!("Failed to initialize logging: {e}"),
+    })?;
 
     let config_path = shellexpand::tilde(&cli.config).to_string();
     let config_path = PathBuf::from(config_path);
@@ -57,7 +56,7 @@ async fn main() -> miette::Result<()> {
 
 async fn start_daemon(config_path: PathBuf, foreground: bool) -> Result<()> {
     info!("Starting karabiner-pkl daemon");
-    
+
     let daemon = Daemon::new(config_path)?;
     daemon.start().await?;
 
@@ -96,7 +95,7 @@ async fn compile_once(config_path: PathBuf) -> Result<()> {
 
 async fn check_config(config_path: PathBuf) -> Result<()> {
     println!("Checking configuration: {}", config_path.display());
-    
+
     let compiler = compiler::Compiler::new()?;
     match compiler.compile(&config_path).await {
         Ok(_) => {
@@ -112,7 +111,7 @@ async fn check_config(config_path: PathBuf) -> Result<()> {
 
 fn show_logs(log_file: PathBuf, lines: usize, follow: bool) -> Result<()> {
     use std::process::Command;
-    
+
     if follow {
         Command::new("tail")
             .args(["-f", "-n", &lines.to_string()])
@@ -130,7 +129,7 @@ fn show_logs(log_file: PathBuf, lines: usize, follow: bool) -> Result<()> {
                 message: format!("Failed to show logs: {e}"),
             })?;
     }
-    
+
     Ok(())
 }
 
@@ -149,8 +148,11 @@ async fn init_config(config_path: PathBuf, force: bool) -> Result<()> {
         });
     }
 
-    println!("Creating example configuration at: {}", config_path.display());
-    
+    println!(
+        "Creating example configuration at: {}",
+        config_path.display()
+    );
+
     let example_config = r#"module karabiner_config
 
 import "@karabiner"
@@ -178,11 +180,9 @@ config: karabiner.Config = simpleConfig.toConfig()
 "#;
 
     if let Some(parent) = config_path.parent() {
-        std::fs::create_dir_all(parent).map_err(|e| {
-            error::KarabinerPklError::ConfigReadError {
-                path: parent.to_path_buf(),
-                source: e,
-            }
+        std::fs::create_dir_all(parent).map_err(|e| error::KarabinerPklError::ConfigReadError {
+            path: parent.to_path_buf(),
+            source: e,
         })?;
     }
 
@@ -194,19 +194,22 @@ config: karabiner.Config = simpleConfig.toConfig()
     })?;
 
     println!("✅ Created example configuration!");
-    println!("Edit {} and run 'karabiner-pkl compile' to test", config_path.display());
-    
+    println!(
+        "Edit {} and run 'karabiner-pkl compile' to test",
+        config_path.display()
+    );
+
     Ok(())
 }
 
 async fn add_import(source: String, name: Option<String>) -> Result<()> {
     use import::Importer;
-    
+
     let importer = Importer::new()?;
     importer.import(&source, name).await?;
-    
+
     println!("✅ Successfully imported file to library");
     println!("The file will be automatically imported when you compile your configuration.");
-    
+
     Ok(())
 }
