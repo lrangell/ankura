@@ -13,3 +13,4 @@ logs/
 test-config.pkl
 .claude
 claude.md
+.docs
