@@ -226,6 +226,13 @@ function shiftLayer(trigger: String): karabiner.Rule = new {
           new karabiner.FromEvent { key_code = trigger },
           new karabiner.FromEvent { key_code = num }
         )
+        simultaneous_options = new karabiner.SimultaneousOptions {
+          key_down_order = "strict"
+          key_up_order = "strict_inverse"
+          to_after_key_up = List(
+            new karabiner.ToEvent { key_code = trigger }
+          )
+        }
       }
       to = List(
         new karabiner.ToEvent {
