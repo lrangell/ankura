@@ -227,6 +227,7 @@ jobs:
           repository: lrangell/homebrew-karabiner-pkl
           token: ${{ secrets.GH_PAT }}
           path: tap
+          ref: main
 
       - name: Update formula
         run: |
