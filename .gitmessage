@@ -1,0 +1,14 @@
+# <type>: <subject>
+
+# Type should be one of the following:
+# - feat: A new feature
+# - fix: A bug fix
+# - docs: Documentation changes
+# - style: Code style changes (formatting, etc)
+# - refactor: Code refactoring
+# - perf: Performance improvements
+# - test: Adding or updating tests
+# - chore: Maintenance tasks
+# - ci: CI/CD changes
+
+# Subject should be a short summary (50 chars or less)
