@@ -2,6 +2,77 @@ module helpers
 
 import "karabiner.pkl"
 
+// Valid key codes - based on Karabiner-Elements documentation
+const validKeyCodes: Set<String> = Set(
+  // Letters (lowercase only)
+  "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m",
+  "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z",
+  
+  // Numbers
+  "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
+  
+  // Function keys
+  "f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "f10", "f11", "f12",
+  "f13", "f14", "f15", "f16", "f17", "f18", "f19", "f20", "f21", "f22", "f23", "f24",
+  
+  // Special keys
+  "escape", "return_or_enter", "tab", "spacebar", "hyphen", "equal_sign",
+  "open_bracket", "close_bracket", "backslash", "non_us_pound", "semicolon",
+  "quote", "grave_accent_and_tilde", "comma", "period", "slash", "non_us_backslash",
+  
+  // Lock keys
+  "caps_lock", "scroll_lock", "num_lock",
+  
+  // Modifier keys
+  "left_shift", "left_control", "left_option", "left_command",
+  "right_shift", "right_control", "right_option", "right_command",
+  "fn",
+  
+  // Arrow keys
+  "up_arrow", "down_arrow", "left_arrow", "right_arrow",
+  
+  // Navigation keys
+  "page_up", "page_down", "home", "end",
+  
+  // Delete keys
+  "delete_or_backspace", "delete_forward",
+  
+  // System keys
+  "print_screen", "pause", "insert",
+  
+  // Media keys
+  "volume_up", "volume_down", "mute",
+  "play", "stop", "rewind", "fast_forward",
+  "brightness_up", "brightness_down",
+  
+  // Keypad
+  "keypad_0", "keypad_1", "keypad_2", "keypad_3", "keypad_4",
+  "keypad_5", "keypad_6", "keypad_7", "keypad_8", "keypad_9",
+  "keypad_num_lock", "keypad_slash", "keypad_asterisk", "keypad_hyphen",
+  "keypad_plus", "keypad_enter", "keypad_period", "keypad_equal_sign",
+  "keypad_comma",
+  
+  // International keys
+  "international1", "international2", "international3", "international4",
+  "international5", "international6", "international7", "international8",
+  "international9", "lang1", "lang2", "lang3", "lang4", "lang5",
+  "lang6", "lang7", "lang8", "lang9",
+  
+  // Japanese keys
+  "japanese_eisuu", "japanese_kana", "japanese_pc_nfer", "japanese_pc_xfer",
+  "japanese_pc_katakana",
+  
+  // Other
+  "help", "menu", "application", "power", "execute", "find", "select", "again",
+  "undo", "cut", "copy", "paste", "find", "mute", "volume_up", "volume_down"
+)
+
+// Validate a key code
+function validateKeyCode(key: String): String = 
+  if (!validKeyCodes.contains(key)) 
+    throw("Invalid key code: '\(key)'. Key codes must be lowercase. Common issues: Use 'g' not 'G', 'shift' is a modifier not a key.")
+  else key
+
 // Key constants
 a = "a"
 b = "b"
@@ -95,14 +166,14 @@ function basic(
 ): karabiner.Manipulator = new {
   type = "basic"
   from = new karabiner.FromEvent {
-    key_code = fromKey
+    key_code = validateKeyCode(fromKey)
     modifiers = if (modifiers != null) new karabiner.Modifiers {
       mandatory = modifiers
     } else null
   }
   to = List(
     new karabiner.ToEvent {
-      key_code = toKey
+      key_code = validateKeyCode(toKey)
     }
   )
 }
@@ -139,14 +210,14 @@ function layer(
     new karabiner.Manipulator {
       type = "basic"
       from = new karabiner.FromEvent {
-        key_code = entry.key
+        key_code = validateKeyCode(entry.key)
         modifiers = new karabiner.Modifiers {
           mandatory = List(trigger)
         }
       }
       to = if (entry.value is String) List(
         new karabiner.ToEvent {
-          key_code = entry.value as String
+          key_code = validateKeyCode(entry.value as String)
         }
       ) else List(entry.value as karabiner.ToEvent)
       parameters = new karabiner.ManipulatorParameters {
@@ -199,20 +270,20 @@ function shiftLayer(trigger: String): karabiner.Rule = new {
       type = "basic"
       from = new karabiner.FromEvent {
         simultaneous = List(
-          new karabiner.FromEvent { key_code = trigger },
-          new karabiner.FromEvent { key_code = letter }
+          new karabiner.FromEvent { key_code = validateKeyCode(trigger) },
+          new karabiner.FromEvent { key_code = validateKeyCode(letter) }
         )
         simultaneous_options = new karabiner.SimultaneousOptions {
           key_down_order = "strict"
           key_up_order = "strict_inverse"
           to_after_key_up = List(
-            new karabiner.ToEvent { key_code = trigger }
+            new karabiner.ToEvent { key_code = validateKeyCode(trigger) }
           )
         }
       }
       to = List(
         new karabiner.ToEvent {
-          key_code = letter
+          key_code = validateKeyCode(letter)
           modifiers = List("left_shift")
         }
       )
@@ -222,20 +293,20 @@ function shiftLayer(trigger: String): karabiner.Rule = new {
       type = "basic"
       from = new karabiner.FromEvent {
         simultaneous = List(
-          new karabiner.FromEvent { key_code = trigger },
-          new karabiner.FromEvent { key_code = num }
+          new karabiner.FromEvent { key_code = validateKeyCode(trigger) },
+          new karabiner.FromEvent { key_code = validateKeyCode(num) }
         )
         simultaneous_options = new karabiner.SimultaneousOptions {
           key_down_order = "strict"
           key_up_order = "strict_inverse"
           to_after_key_up = List(
-            new karabiner.ToEvent { key_code = trigger }
+            new karabiner.ToEvent { key_code = validateKeyCode(trigger) }
           )
         }
       }
       to = List(
         new karabiner.ToEvent {
-          key_code = num
+          key_code = validateKeyCode(num)
           modifiers = List("left_shift")
         }
       )
@@ -403,8 +474,8 @@ function simlayer(
       type = "basic"
       from = new karabiner.FromEvent {
         simultaneous = List(
-          new karabiner.FromEvent { key_code = trigger },
-          new karabiner.FromEvent { key_code = entry.key }
+          new karabiner.FromEvent { key_code = validateKeyCode(trigger) },
+          new karabiner.FromEvent { key_code = validateKeyCode(entry.key) }
         )
         simultaneous_options = new karabiner.SimultaneousOptions {
           key_down_order = "strict"
@@ -413,7 +484,7 @@ function simlayer(
       }
       to = if (entry.value is String) List(
         new karabiner.ToEvent {
-          key_code = entry.value as String
+          key_code = validateKeyCode(entry.value as String)
         }
       ) else List(entry.value as karabiner.ToEvent)
       parameters = new karabiner.ManipulatorParameters {
