@@ -43,7 +43,7 @@ impl Daemon {
         info!("Starting karabiner-pkl daemon");
         info!("Watching: {}", self.config_path.display());
 
-        self.compile_and_notify(None).await;
+        self.compile_and_notify(None, None).await;
 
         let (tx, rx) = std::sync::mpsc::channel();
         let mut debouncer = new_debouncer(Duration::from_millis(300), tx)
@@ -74,6 +74,7 @@ impl Daemon {
                                     &notification_manager,
                                     &config_path,
                                     None, // No profile override for daemon watch mode
+                                    None, // No output override for daemon watch mode
                                 )
                                 .await;
                             }
@@ -100,17 +101,22 @@ impl Daemon {
         Ok(())
     }
 
-    pub async fn compile_once(&self, profile_name: Option<&str>) -> Result<()> {
-        self.compile_and_notify(profile_name).await;
+    pub async fn compile_once(
+        &self,
+        profile_name: Option<&str>,
+        output_path: Option<&str>,
+    ) -> Result<()> {
+        self.compile_and_notify(profile_name, output_path).await;
         Ok(())
     }
 
-    async fn compile_and_notify(&self, profile_name: Option<&str>) {
+    async fn compile_and_notify(&self, profile_name: Option<&str>, output_path: Option<&str>) {
         Self::compile_with_notification(
             &self.compiler,
             &self.notification_manager,
             &self.config_path,
             profile_name,
+            output_path,
         )
         .await;
     }
@@ -120,8 +126,12 @@ impl Daemon {
         notification_manager: &Arc<NotificationManager>,
         config_path: &Path,
         profile_name: Option<&str>,
+        output_path: Option<&str>,
     ) {
-        match compiler.compile(config_path, profile_name).await {
+        match compiler
+            .compile(config_path, profile_name, output_path)
+            .await
+        {
             Ok(_) => {
                 info!("Successfully compiled configuration");
                 notification_manager.send_success("Karabiner configuration updated");

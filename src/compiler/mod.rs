@@ -41,7 +41,12 @@ impl Compiler {
         })
     }
 
-    pub async fn compile(&self, config_path: &Path, profile_name: Option<&str>) -> Result<()> {
+    pub async fn compile(
+        &self,
+        config_path: &Path,
+        profile_name: Option<&str>,
+        output_path: Option<&str>,
+    ) -> Result<()> {
         info!("Compiling {}", config_path.display());
 
         if !config_path.exists() {
@@ -122,7 +127,7 @@ impl Compiler {
             .map_err(|e| KarabinerPklError::JsonParseError { source: e })?;
 
         // Extract the 'config' field from the pkl output
-        let mut config = pkl_output
+        let config = pkl_output
             .get("config")
             .ok_or_else(|| KarabinerPklError::ValidationError {
                 message: "Pkl output must contain a 'config' field".to_string(),
@@ -131,21 +136,76 @@ impl Compiler {
 
         self.validate_config(&config)?;
 
+        // Extract the profile from the compiled config
+        let mut new_profile = config["profiles"][0].clone();
+
         // Override profile name if provided
         if let Some(name) = profile_name {
-            if let Some(profiles) = config.get_mut("profiles").and_then(|p| p.as_array_mut()) {
-                if let Some(first_profile) = profiles.get_mut(0) {
-                    first_profile["name"] = serde_json::json!(name);
+            new_profile["name"] = serde_json::json!(name);
+        }
+
+        // Determine the target profile name
+        let target_profile_name = new_profile["name"].as_str().unwrap_or("pkl");
+
+        let karabiner_json_path = if let Some(path) = output_path {
+            PathBuf::from(path)
+        } else {
+            self.karabiner_config_dir.join("karabiner.json")
+        };
+
+        // Load existing configuration or create new one
+        let mut final_config = if karabiner_json_path.exists() {
+            let existing_content = std::fs::read_to_string(&karabiner_json_path).map_err(|e| {
+                KarabinerPklError::ConfigReadError {
+                    path: karabiner_json_path.clone(),
+                    source: e,
                 }
-            }
+            })?;
+
+            serde_json::from_str(&existing_content)
+                .map_err(|e| KarabinerPklError::JsonParseError { source: e })?
+        } else {
+            // Create a new config with just the title
+            serde_json::json!({
+                "profiles": []
+            })
+        };
+
+        // Ensure we have a profiles array
+        if !final_config
+            .get("profiles")
+            .map(|p| p.is_array())
+            .unwrap_or(false)
+        {
+            final_config["profiles"] = serde_json::json!([]);
         }
 
-        if config.get("title").is_none() {
-            config["title"] = serde_json::json!("Karabiner-Pkl Generated Configuration");
+        // Update or add the profile
+        let profiles = final_config["profiles"].as_array_mut().unwrap();
+
+        // Find existing profile with the same name
+        let existing_profile_index = profiles
+            .iter()
+            .position(|p| p["name"].as_str() == Some(target_profile_name));
+
+        if let Some(index) = existing_profile_index {
+            // Update existing profile
+            profiles[index] = new_profile;
+        } else {
+            // Add new profile - should not be selected by default
+            new_profile["selected"] = serde_json::json!(false);
+            profiles.push(new_profile);
         }
 
-        let karabiner_json_path = self.karabiner_config_dir.join("karabiner.json");
-        let pretty_json = serde_json::to_string_pretty(&config)
+        // Set title if not present
+        if final_config.get("title").is_none() {
+            final_config["title"] = config
+                .get("title")
+                .cloned()
+                .unwrap_or_else(|| serde_json::json!("Karabiner-Pkl Configuration"));
+        }
+
+        let pretty_json = serde_json::to_string_pretty(&final_config)
             .map_err(|e| KarabinerPklError::JsonParseError { source: e })?;
 
         std::fs::write(&karabiner_json_path, pretty_json).map_err(|e| {

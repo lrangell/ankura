@@ -30,6 +30,13 @@ pub enum Commands {
             help = "Override the profile name (default: uses config value or 'pkl')"
         )]
         profile_name: Option<String>,
+
+        #[arg(
+            short,
+            long,
+            help = "Output file path (default: ~/.config/karabiner/karabiner.json)"
+        )]
+        output: Option<String>,
     },
 
     Check,

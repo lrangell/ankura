@@ -32,8 +32,11 @@ async fn main() -> miette::Result<()> {
         Commands::Stop => {
             stop_daemon().await?;
         }
-        Commands::Compile { profile_name } => {
-            compile_once(config_path, profile_name.as_deref()).await?;
+        Commands::Compile {
+            profile_name,
+            output,
+        } => {
+            compile_once(config_path, profile_name.as_deref(), output).await?;
         }
         Commands::Check => {
             check_config(config_path).await?;
@@ -88,9 +91,13 @@ async fn stop_daemon() -> Result<()> {
     Ok(())
 }
 
-async fn compile_once(config_path: PathBuf, profile_name: Option<&str>) -> Result<()> {
+async fn compile_once(
+    config_path: PathBuf,
+    profile_name: Option<&str>,
+    output: Option<String>,
+) -> Result<()> {
     let daemon = Daemon::new(config_path)?;
-    daemon.compile_once(profile_name).await?;
+    daemon.compile_once(profile_name, output.as_deref()).await?;
     Ok(())
 }
 
@@ -98,7 +105,7 @@ async fn check_config(config_path: PathBuf) -> Result<()> {
     println!("Checking configuration: {}", config_path.display());
 
     let compiler = compiler::Compiler::new()?;
-    match compiler.compile(&config_path, None).await {
+    match compiler.compile(&config_path, None, None).await {
         Ok(_) => {
             println!("✅ Configuration is valid!");
             Ok(())
