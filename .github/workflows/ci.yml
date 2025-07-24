@@ -8,10 +8,42 @@ on:
 
 env:
   RUST_BACKTRACE: 1
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  CARGO_PROFILE_DEV_DEBUG: 0
+  RUSTFLAGS: "-C link-arg=-s"
 
 jobs:
+  check:
+    name: Quick Check
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: "v0-rust-check"
+
+      - name: Setup sccache
+        uses: mozilla-actions/sccache-action@v0.0.9
+
+      - name: Run cargo check
+        run: cargo check --all-features --locked
+        env:
+          SCCACHE_GHA_ENABLED: "true"
+          RUSTC_WRAPPER: "sccache"
+
+      - name: Check formatting
+        run: cargo fmt -- --check
+
   test:
     name: Test
+    needs: check
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -38,35 +70,32 @@ jobs:
           sudo mv pkl /usr/local/bin/
           pkl --version
 
-      - name: Cache cargo registry
-        uses: actions/cache@v4
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
         with:
-          path: ~/.cargo/registry
-          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+          prefix-key: "v0-rust-${{ matrix.os }}"
 
-      - name: Cache cargo index
-        uses: actions/cache@v4
-        with:
-          path: ~/.cargo/git
-          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+      - name: Setup sccache
+        uses: mozilla-actions/sccache-action@v0.0.9
 
-      - name: Cache cargo build
-        uses: actions/cache@v4
-        with:
-          path: target
-          key: ${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}
+      - name: Install cargo-nextest
+        uses: taiki-e/install-action@nextest
 
       - name: Run tests
-        run: cargo test --all-features
+        run: cargo nextest run --all-features --locked
+        env:
+          SCCACHE_GHA_ENABLED: "true"
+          RUSTC_WRAPPER: "sccache"
 
       - name: Run clippy
         run: cargo clippy -- -D warnings
-
-      - name: Check formatting
-        run: cargo fmt -- --check
+        env:
+          SCCACHE_GHA_ENABLED: "true"
+          RUSTC_WRAPPER: "sccache"
 
   build:
     name: Build
+    needs: check
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -97,8 +126,20 @@ jobs:
           sudo mv pkl /usr/local/bin/
           pkl --version
 
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: "v0-rust-${{ matrix.target }}"
+
+      - name: Setup sccache
+        uses: mozilla-actions/sccache-action@v0.0.9
+
       - name: Build
-        run: cargo build --release --target ${{ matrix.target }}
+        run: cargo build --release --locked --target ${{ matrix.target }}
+        env:
+          SCCACHE_GHA_ENABLED: "true"
+          RUSTC_WRAPPER: "sccache"
+          CARGO_PROFILE_RELEASE_CODEGEN_UNITS: 16
 
       - name: Verify binary
         run: |

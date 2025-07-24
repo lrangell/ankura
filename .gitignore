@@ -12,3 +12,5 @@ logs/
 *.pkl.bak
 *.pkl.tmp
 test-config.pkl
+.claude
+claude.md

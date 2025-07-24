@@ -9,10 +9,48 @@ on:
 
 env:
   RUST_BACKTRACE: 1
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  CARGO_PROFILE_DEV_DEBUG: 0
+  RUSTFLAGS: "-C link-arg=-s"
 
 jobs:
+  check:
+    name: Quick Check
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: "v0-rust-check"
+
+      - name: Setup sccache
+        uses: mozilla-actions/sccache-action@v0.0.9
+
+      - name: Run cargo check
+        run: cargo check --all-features --locked
+        env:
+          SCCACHE_GHA_ENABLED: "true"
+          RUSTC_WRAPPER: "sccache"
+
+      - name: Run clippy
+        run: cargo clippy -- -D warnings
+        env:
+          SCCACHE_GHA_ENABLED: "true"
+          RUSTC_WRAPPER: "sccache"
+
+      - name: Check formatting
+        run: cargo fmt -- --check
+
   nextest:
     name: Nextest
+    needs: check
     runs-on: macos-latest
     steps:
       - name: Checkout code
@@ -37,28 +75,24 @@ jobs:
       - name: Install cargo-nextest
         uses: taiki-e/install-action@nextest
 
-      - name: Cache cargo registry
-        uses: actions/cache@v4
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
         with:
-          path: ~/.cargo/registry
-          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+          prefix-key: "v0-rust-nextest"
 
-      - name: Cache cargo index
-        uses: actions/cache@v4
-        with:
-          path: ~/.cargo/git
-          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Cache cargo build
-        uses: actions/cache@v4
-        with:
-          path: target
-          key: ${{ runner.os }}-cargo-nextest-${{ hashFiles('**/Cargo.lock') }}
+      - name: Setup sccache
+        uses: mozilla-actions/sccache-action@v0.0.9
 
       - name: Run tests with nextest
-        run: cargo nextest run --all-features
+        run: cargo nextest run --all-features --locked
+        env:
+          SCCACHE_GHA_ENABLED: "true"
+          RUSTC_WRAPPER: "sccache"
 
       - name: Generate test report
         if: always()
-        run: cargo nextest run --all-features --profile ci
+        run: cargo nextest run --all-features --locked --profile ci
         continue-on-error: true
+        env:
+          SCCACHE_GHA_ENABLED: "true"
+          RUSTC_WRAPPER: "sccache"
