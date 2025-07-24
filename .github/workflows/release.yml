@@ -209,21 +209,6 @@ jobs:
     needs: [test, release]
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Get version
-        id: version
-        run: |
-          VERSION=$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[0].version')
-          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-          echo "TAG=v$VERSION" >> $GITHUB_OUTPUT
-
-  update-tap:
-    name: Update Homebrew Tap
-    needs: [test, release]
-    runs-on: ubuntu-latest
-    steps:
       - name: Get version
         id: version
         run: |
