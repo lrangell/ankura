@@ -165,7 +165,6 @@ function vimNavigation(modifierKey: String?): karabiner.Rule =
     ["0"] = home
     ["4"] = end
     ["g"] = page_up
-    ["G"] = page_down
     ["d"] = delete_forward
     ["x"] = delete_or_backspace
   }, null)
