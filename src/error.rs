@@ -50,7 +50,10 @@ pub enum KarabinerPklError {
 
     #[error("Configuration validation failed")]
     #[diagnostic(code(karabiner_pkl::validation_error))]
-    ValidationError { message: String },
+    ValidationError {
+        #[help]
+        message: String,
+    },
 
     #[error("File watching error")]
     #[diagnostic(code(karabiner_pkl::watch_error))]

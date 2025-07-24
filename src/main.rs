@@ -1,6 +1,7 @@
 mod cli;
 mod compiler;
 mod daemon;
+mod embedded;
 mod error;
 mod import;
 mod logging;
@@ -155,8 +156,8 @@ async fn init_config(config_path: PathBuf, force: bool) -> Result<()> {
 
     let example_config = r#"module karabiner_config
 
-import "@karabiner"
-import "@helpers"
+import "modulepath:/karabiner_pkl/lib/karabiner.pkl" as karabiner
+import "modulepath:/karabiner_pkl/lib/helpers.pkl" as helpers
 
 // Your configuration using the simplified API
 simpleConfig: karabiner.SimpleConfig = new {

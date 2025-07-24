@@ -1,13 +1,17 @@
+use crate::embedded;
 use crate::error::{KarabinerPklError, Result};
 use serde_json::Value;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use tempfile::TempDir;
 use tracing::info;
 use which::which;
 
 pub struct Compiler {
     pkl_path: PathBuf,
     karabiner_config_dir: PathBuf,
+    _embedded_temp_dir: Option<TempDir>,
+    embedded_lib_path: Option<PathBuf>,
 }
 
 impl Compiler {
@@ -26,9 +30,14 @@ impl Compiler {
             }
         })?;
 
+        // Extract embedded pkl-lib files once when creating the compiler
+        let (temp_dir, embedded_lib_path) = embedded::extract_pkl_lib()?;
+
         Ok(Self {
             pkl_path,
             karabiner_config_dir,
+            _embedded_temp_dir: Some(temp_dir),
+            embedded_lib_path: Some(embedded_lib_path),
         })
     }
 
@@ -51,44 +60,25 @@ impl Compiler {
         })?;
         let lib_dir = home.join(".config/karabiner_pkl/lib");
 
-        // Find the pkl-lib directory (either from installed location or development)
-        let pkl_lib_dir = if let Ok(exe_path) = std::env::current_exe() {
-            // Check if we're in development (cargo run)
-            let dev_pkl_lib = exe_path
-                .parent()
-                .and_then(|p| p.parent())
-                .and_then(|p| p.parent())
-                .map(|p| p.join("pkl-lib"));
-
-            if dev_pkl_lib.as_ref().map(|p| p.exists()).unwrap_or(false) {
-                dev_pkl_lib
-            } else {
-                // Installed location: next to the binary
-                exe_path.parent().map(|p| p.join("pkl-lib"))
-            }
-        } else {
-            None
-        };
-
         let mut pkl_command = Command::new(&self.pkl_path);
         pkl_command.args(["eval", "--format=json"]);
 
         // Add module paths
         let mut module_paths = vec![];
 
-        if let Some(pkl_lib) = pkl_lib_dir.as_ref().filter(|p| p.exists()) {
-            module_paths.push(pkl_lib.to_string_lossy().to_string());
+        // Always add the embedded library path first
+        if let Some(embedded_path) = &self.embedded_lib_path {
+            module_paths.push(embedded_path.to_string_lossy().to_string());
         }
 
+        // Add user library directory if it exists
         if lib_dir.exists() {
             module_paths.push(lib_dir.to_string_lossy().to_string());
         }
 
-        if !module_paths.is_empty() {
-            pkl_command.arg("--module-path");
-            pkl_command.arg(module_paths.join(":"));
-        }
-
+        // Add the module path argument for modulepath: imports
+        pkl_command.arg("--module-path");
+        pkl_command.arg(module_paths.join(":"));
         let output =
             pkl_command
                 .arg(config_path)
@@ -128,8 +118,16 @@ impl Compiler {
         }
 
         let json_str = String::from_utf8_lossy(&output.stdout);
-        let mut config: Value = serde_json::from_str(&json_str)
+        let pkl_output: Value = serde_json::from_str(&json_str)
             .map_err(|e| KarabinerPklError::JsonParseError { source: e })?;
+
+        // Extract the 'config' field from the pkl output
+        let mut config = pkl_output
+            .get("config")
+            .ok_or_else(|| KarabinerPklError::ValidationError {
+                message: "Pkl output must contain a 'config' field".to_string(),
+            })?
+            .clone();
 
         self.validate_config(&config)?;
 
