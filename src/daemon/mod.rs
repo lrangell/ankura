@@ -43,7 +43,7 @@ impl Daemon {
         info!("Starting karabiner-pkl daemon");
         info!("Watching: {}", self.config_path.display());
 
-        self.compile_and_notify().await;
+        self.compile_and_notify(None).await;
 
         let (tx, rx) = std::sync::mpsc::channel();
         let mut debouncer = new_debouncer(Duration::from_millis(300), tx)
@@ -73,6 +73,7 @@ impl Daemon {
                                     &compiler,
                                     &notification_manager,
                                     &config_path,
+                                    None, // No profile override for daemon watch mode
                                 )
                                 .await;
                             }
@@ -99,16 +100,17 @@ impl Daemon {
         Ok(())
     }
 
-    pub async fn compile_once(&self) -> Result<()> {
-        self.compile_and_notify().await;
+    pub async fn compile_once(&self, profile_name: Option<&str>) -> Result<()> {
+        self.compile_and_notify(profile_name).await;
         Ok(())
     }
 
-    async fn compile_and_notify(&self) {
+    async fn compile_and_notify(&self, profile_name: Option<&str>) {
         Self::compile_with_notification(
             &self.compiler,
             &self.notification_manager,
             &self.config_path,
+            profile_name,
         )
         .await;
     }
@@ -117,8 +119,9 @@ impl Daemon {
         compiler: &Arc<Compiler>,
         notification_manager: &Arc<NotificationManager>,
         config_path: &Path,
+        profile_name: Option<&str>,
     ) {
-        match compiler.compile(config_path).await {
+        match compiler.compile(config_path, profile_name).await {
             Ok(_) => {
                 info!("Successfully compiled configuration");
                 notification_manager.send_success("Karabiner configuration updated");

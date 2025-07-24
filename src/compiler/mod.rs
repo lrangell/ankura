@@ -41,7 +41,7 @@ impl Compiler {
         })
     }
 
-    pub async fn compile(&self, config_path: &Path) -> Result<()> {
+    pub async fn compile(&self, config_path: &Path, profile_name: Option<&str>) -> Result<()> {
         info!("Compiling {}", config_path.display());
 
         if !config_path.exists() {
@@ -131,6 +131,15 @@ impl Compiler {
 
         self.validate_config(&config)?;
 
+        // Override profile name if provided
+        if let Some(name) = profile_name {
+            if let Some(profiles) = config.get_mut("profiles").and_then(|p| p.as_array_mut()) {
+                if let Some(first_profile) = profiles.get_mut(0) {
+                    first_profile["name"] = serde_json::json!(name);
+                }
+            }
+        }
+
         if config.get("title").is_none() {
             config["title"] = serde_json::json!("Karabiner-Pkl Generated Configuration");
         }
@@ -173,20 +182,8 @@ impl Compiler {
             });
         }
 
-        // Ensure we have a Default profile
-        let profiles_array = profiles.as_array().unwrap();
-        let has_default = profiles_array.iter().any(|p| {
-            p.get("name")
-                .and_then(|n| n.as_str())
-                .map(|n| n == "Default")
-                .unwrap_or(false)
-        });
-
-        if !has_default {
-            return Err(KarabinerPklError::ValidationError {
-                message: "Configuration must contain a profile named 'Default'".to_string(),
-            });
-        }
+        // No need to check for specific profile name anymore
+        // Just ensure we have at least one profile which we already checked above
 
         Ok(())
     }

@@ -23,7 +23,14 @@ pub enum Commands {
 
     Stop,
 
-    Compile,
+    Compile {
+        #[arg(
+            short,
+            long,
+            help = "Override the profile name (default: uses config value or 'pkl')"
+        )]
+        profile_name: Option<String>,
+    },
 
     Check,
 

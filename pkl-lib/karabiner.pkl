@@ -4,7 +4,7 @@ class Config {
   title: String = "Karabiner-Pkl Configuration"
   profiles: List<Profile> = List(
     new Profile {
-      name = "Default"
+      name = "pkl"
       selected = true
     }
   )
@@ -195,6 +195,7 @@ typealias PointingButton = String
 
 // Simplified configuration that only uses the default profile
 class SimpleConfig {
+  profileName: String = "pkl"
   simple_modifications: List<SimpleModification> = List()
   complex_modifications: ComplexModifications?
   parameters: Parameters?
@@ -208,7 +209,7 @@ class SimpleConfig {
     new Config {
       profiles = List(
         new Profile {
-          name = "Default"
+          name = profileName
           selected = true
           simple_modifications = mods
           complex_modifications = complexMods

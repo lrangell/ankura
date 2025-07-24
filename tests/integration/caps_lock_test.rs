@@ -50,7 +50,7 @@ fn test_caps_lock_in_fixtures() {
         .expect("Failed to compile fixture");
 
     // Verify the fixture compiles and produces expected output
-    assert_eq!(result["config"]["profiles"][0]["name"], "Default");
+    assert_eq!(result["config"]["profiles"][0]["name"], "pkl");
     assert!(
         !result["config"]["profiles"][0]["complex_modifications"]["rules"]
             .as_array()
