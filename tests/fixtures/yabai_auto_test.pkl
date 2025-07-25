@@ -1,0 +1,27 @@
+module yabai_auto_test
+
+import "modulepath:/karabiner_pkl/lib/karabiner.pkl" as karabiner
+import "modulepath:/karabiner_pkl/lib/helpers.pkl" as helpers
+import "modulepath:/karabiner_pkl/lib/yabai.pkl" as yabai
+
+// Test the new auto-mapping API
+yabaiConfig: yabai.Yabai = new {
+  cmdPath = "/opt/homebrew/bin/yabai"
+  
+  // Define key mappings
+  focusSpace = helpers.simlayerKeyPresses("spacebar", helpers.qwertyRange("u", "close_bracket"))
+  focusSpaceTrigger = "spacebar"  // The trigger key for focus space actions
+  prevSpace = helpers.hyperkey("h")
+  nextSpace = helpers.hyperkey("l")
+  focusRecentWindow = helpers.ctrl("n")
+  focusRecentSpace = helpers.ctrl("m")
+}
+
+// Simple config using auto-generated rules
+simpleConfig: karabiner.SimpleConfig = new {
+  complex_modifications = new karabiner.ComplexModifications {
+    rules = yabaiConfig.generateRules()
+  }
+}
+
+config: karabiner.Config = simpleConfig.toConfig()

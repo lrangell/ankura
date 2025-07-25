@@ -1,0 +1,162 @@
+module yabai
+
+import "karabiner.pkl"
+import "helpers.pkl"
+
+class Yabai {
+  cmdPath: String = "/opt/homebrew/bin/yabai"
+  
+  // Key mapping properties
+  focusSpace: List<karabiner.KeyPress>?
+  focusSpaceTrigger: String = "spacebar"  // Trigger key for focusSpace mappings
+  prevSpace: karabiner.KeyPress?
+  nextSpace: karabiner.KeyPress?
+  focusRecentWindow: karabiner.KeyPress?
+  focusRecentSpace: karabiner.KeyPress?
+  
+  function executeYabaiCommand(args: String): karabiner.ToEvent = new {
+    shell_command = "\(cmdPath) \(args)"
+  }
+  
+  function focusSpaceByIndex(index: Int): karabiner.ToEvent = 
+    executeYabaiCommand("-m space --focus \(index)")
+  
+  function focusSpaceRecent(): karabiner.ToEvent = 
+    executeYabaiCommand("-m space --focus recent")
+  
+  function focusSpacePrev(): karabiner.ToEvent = 
+    executeYabaiCommand("-m space --focus prev")
+  
+  function focusSpaceNext(): karabiner.ToEvent = 
+    executeYabaiCommand("-m space --focus next")
+  
+  function focusWindowRecent(): karabiner.ToEvent = 
+    executeYabaiCommand("-m window --focus recent")
+  
+  function focusWindowDirection(direction: "north" | "east" | "south" | "west"): karabiner.ToEvent = 
+    executeYabaiCommand("-m window --focus \(direction)")
+  
+  function focusDisplay(index: Int): karabiner.ToEvent = 
+    executeYabaiCommand("-m display --focus \(index)")
+  
+  function focusDisplayRecent(): karabiner.ToEvent = 
+    executeYabaiCommand("-m display --focus recent")
+  
+  function focusDisplayPrev(): karabiner.ToEvent = 
+    executeYabaiCommand("-m display --focus prev")
+  
+  function focusDisplayNext(): karabiner.ToEvent = 
+    executeYabaiCommand("-m display --focus next")
+  
+  function moveWindowToSpace(index: Int): karabiner.ToEvent = 
+    executeYabaiCommand("-m window --space \(index)")
+  
+  function moveWindowToSpacePrev(): karabiner.ToEvent = 
+    executeYabaiCommand("-m window --space prev")
+  
+  function moveWindowToSpaceNext(): karabiner.ToEvent = 
+    executeYabaiCommand("-m window --space next")
+  
+  function moveWindowToDisplay(index: Int): karabiner.ToEvent = 
+    executeYabaiCommand("-m window --display \(index)")
+  
+  function swapWindowDirection(direction: "north" | "east" | "south" | "west"): karabiner.ToEvent = 
+    executeYabaiCommand("-m window --swap \(direction)")
+  
+  function toggleWindowFloat(): karabiner.ToEvent = 
+    executeYabaiCommand("-m window --toggle float")
+  
+  function toggleWindowSticky(): karabiner.ToEvent = 
+    executeYabaiCommand("-m window --toggle sticky")
+  
+  function balanceSpace(): karabiner.ToEvent = 
+    executeYabaiCommand("-m space --balance")
+  
+  function createSpace(): karabiner.ToEvent = 
+    executeYabaiCommand("-m space --create")
+  
+  function destroySpace(): karabiner.ToEvent = 
+    executeYabaiCommand("-m space --destroy")
+  
+  function setSpaceLayout(layout: "bsp" | "float"): karabiner.ToEvent = 
+    executeYabaiCommand("-m space --layout \(layout)")
+  
+  function moveToNextSpace(): karabiner.ToEvent = moveWindowToSpaceNext()
+  function moveToPrevSpace(): karabiner.ToEvent = moveWindowToSpacePrev()
+  
+  // Generate Karabiner rules from configured key mappings
+  function generateRules(): List<karabiner.Rule> = 
+    let (focusSpaceRule = if (focusSpace != null)
+      new karabiner.Rule {
+        description = "Yabai: Focus spaces"
+        manipulators = focusSpace.mapIndexed((idx, keyPress) -> 
+          new karabiner.Manipulator {
+            type = "basic"
+            from = new karabiner.FromEvent {
+              simultaneous = List(
+                new karabiner.FromEvent { key_code = focusSpaceTrigger },
+                new karabiner.FromEvent { key_code = keyPress.key_code }
+              )
+              simultaneous_options = new karabiner.SimultaneousOptions {
+                key_down_order = "strict"
+                key_up_order = "strict_inverse"
+              }
+            }
+            to = List(focusSpaceByIndex(idx + 1))
+          }
+        )
+      }
+    else null)
+    
+    let (navManipulators = List() +
+      (if (prevSpace != null) List(new karabiner.Manipulator {
+        type = "basic"
+        from = new karabiner.FromEvent {
+          key_code = prevSpace.key_code
+          modifiers = if (prevSpace.modifiers != null) new karabiner.Modifiers {
+            mandatory = prevSpace.modifiers
+          } else null
+        }
+        to = List(focusSpacePrev())
+      }) else List()) +
+      (if (nextSpace != null) List(new karabiner.Manipulator {
+        type = "basic"
+        from = new karabiner.FromEvent {
+          key_code = nextSpace.key_code
+          modifiers = if (nextSpace.modifiers != null) new karabiner.Modifiers {
+            mandatory = nextSpace.modifiers
+          } else null
+        }
+        to = List(focusSpaceNext())
+      }) else List()) +
+      (if (focusRecentWindow != null) List(new karabiner.Manipulator {
+        type = "basic"
+        from = new karabiner.FromEvent {
+          key_code = focusRecentWindow.key_code
+          modifiers = if (focusRecentWindow.modifiers != null) new karabiner.Modifiers {
+            mandatory = focusRecentWindow.modifiers
+          } else null
+        }
+        to = List(focusWindowRecent())
+      }) else List()) +
+      (if (focusRecentSpace != null) List(new karabiner.Manipulator {
+        type = "basic"
+        from = new karabiner.FromEvent {
+          key_code = focusRecentSpace.key_code
+          modifiers = if (focusRecentSpace.modifiers != null) new karabiner.Modifiers {
+            mandatory = focusRecentSpace.modifiers
+          } else null
+        }
+        to = List(focusSpaceRecent())
+      }) else List())
+    )
+    
+    let (navRule = if (!navManipulators.isEmpty) new karabiner.Rule {
+      description = "Yabai: Quick navigation"
+      manipulators = navManipulators
+    } else null)
+    
+    List() +
+      (if (focusSpaceRule != null) List(focusSpaceRule) else List()) +
+      (if (navRule != null) List(navRule) else List())
+}

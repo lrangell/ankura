@@ -134,14 +134,14 @@ config: karabiner.Config = simpleConfig.toConfig()
         .expect("Failed to compile");
 
     let rule = &result["profiles"][0]["complex_modifications"]["rules"][0];
-    assert_eq!(rule["description"], "QWERTY Sequence: j k l ;");
+    assert_eq!(rule["description"], "QWERTY Sequence: j k l semicolon");
 
     let manipulators = rule["manipulators"].as_array().unwrap();
     assert_eq!(manipulators.len(), 4);
     assert_eq!(manipulators[0]["from"]["key_code"], "j");
     assert_eq!(manipulators[1]["from"]["key_code"], "k");
     assert_eq!(manipulators[2]["from"]["key_code"], "l");
-    assert_eq!(manipulators[3]["from"]["key_code"], ";");
+    assert_eq!(manipulators[3]["from"]["key_code"], "semicolon");
 }
 
 #[test]

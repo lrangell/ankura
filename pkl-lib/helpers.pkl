@@ -442,9 +442,9 @@ function numRange(start: Int, end: Int): List<String> =
   IntSeq(start, end).toList().map((n) -> n.toString())
 
 // Generate QWERTY row sequences
-qwertyTopRow = List("q", "w", "e", "r", "t", "y", "u", "i", "o", "p", "[", "]")
-qwertyHomeRow = List("a", "s", "d", "f", "g", "h", "j", "k", "l", ";", "'")
-qwertyBottomRow = List("z", "x", "c", "v", "b", "n", "m", ",", ".", "/")
+qwertyTopRow = List("q", "w", "e", "r", "t", "y", "u", "i", "o", "p", "open_bracket", "close_bracket")
+qwertyHomeRow = List("a", "s", "d", "f", "g", "h", "j", "k", "l", "semicolon", "quote")
+qwertyBottomRow = List("z", "x", "c", "v", "b", "n", "m", "comma", "period", "slash")
 
 // Helper to get contiguous keys from QWERTY layout
 function qwertySequence(startKey: String, length: Int): List<String> = 
@@ -493,3 +493,50 @@ function simlayer(
     }
   )
 }
+
+// Creates a mapping of keys to their index positions (1-based)
+// Useful for creating focus space mappings with yabai
+function simlayerKeys(
+  trigger: String,
+  keys: List<String>
+): Mapping<String, Int> = 
+  new Mapping<String, Int> {
+    ...keys.toMap((key) -> key, (key) -> keys.indexOf(key) + 1)
+  }
+
+// Creates a list of KeyPress objects for the given keys
+// These will be used as trigger keys for simultaneous key detection
+function simlayerKeyPresses(
+  trigger: String,
+  keys: List<String>
+): List<karabiner.KeyPress> = 
+  keys.map((key) -> new karabiner.KeyPress {
+    key_code = validateKeyCode(key)
+  })
+
+function hyperkey(key: String): karabiner.KeyPress = new {
+  key_code = validateKeyCode(key)
+  modifiers = List(
+    "left_command",
+    "left_control",
+    "left_option",
+    "left_shift"
+  )
+}
+
+function ctrl(key: String): karabiner.KeyPress = new {
+  key_code = validateKeyCode(key)
+  modifiers = List("left_control")
+}
+
+function range(start: Int, end: Int): List<String> = 
+  IntSeq(start, end).toList().map((n) -> n.toString())
+
+function qwertyRange(startKey: String, endKey: String): List<String> = 
+  let (allKeys = qwertyTopRow + qwertyHomeRow + qwertyBottomRow)
+  let (startIdx = allKeys.indexOf(startKey))
+  let (endIdx = allKeys.indexOf(endKey))
+  if (startIdx == -1) throw("Start key \(startKey) not found in QWERTY layout")
+  else if (endIdx == -1) throw("End key \(endKey) not found in QWERTY layout")
+  else if (startIdx > endIdx) throw("Invalid QWERTY range: \(startKey) comes after \(endKey)")
+  else allKeys.sublist(startIdx, endIdx + 1)

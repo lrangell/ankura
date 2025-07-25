@@ -191,6 +191,9 @@ typealias ConsumerKeyCode = String
 
 typealias PointingButton = String
 
+// Type alias for key press events (used in helpers)
+typealias KeyPress = ToEvent
+
 // Helper functions and generators will be added here
 
 // Simplified configuration that only uses the default profile

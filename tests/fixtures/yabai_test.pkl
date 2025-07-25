@@ -1,0 +1,107 @@
+module yabai_test
+
+import "modulepath:/karabiner_pkl/lib/karabiner.pkl" as karabiner
+import "modulepath:/karabiner_pkl/lib/helpers.pkl" as helpers
+import "modulepath:/karabiner_pkl/lib/yabai.pkl" as yabai
+
+// Test yabai configuration
+yabaiConfig: yabai.Yabai = new {
+  cmdPath = "/opt/homebrew/bin/yabai"
+}
+
+// Example 1: Create space focus mappings using QWERTY row
+// spacebar+u = focus space 1, spacebar+i = focus space 2, etc.
+spaceKeys: List<String> = helpers.qwertyRange("u", "close_bracket")
+spaceMappings: Mapping<String, karabiner.ToEvent> = new {
+  for (i, key in spaceKeys) {
+    [key] = yabaiConfig.focusSpaceByIndex(i + 1)
+  }
+}
+
+// Example 2: Direct yabai command mappings
+simpleConfig: karabiner.SimpleConfig = new {
+  complex_modifications = new karabiner.ComplexModifications {
+    parameters = new karabiner.ComplexModificationParameters {
+      `basic.simultaneous_threshold_milliseconds` = 200
+    }
+    
+    rules = List(
+      // Spacebar layer for yabai window management
+      helpers.simlayer("spacebar", new Mapping<String, String | karabiner.ToEvent> {
+        // Window navigation
+        ["h"] = yabaiConfig.focusWindowDirection("west")
+        ["j"] = yabaiConfig.focusWindowDirection("south")
+        ["k"] = yabaiConfig.focusWindowDirection("north")
+        ["l"] = yabaiConfig.focusWindowDirection("east")
+        
+        // Recent focus
+        ["n"] = yabaiConfig.focusSpaceRecent()
+        ["m"] = yabaiConfig.focusWindowRecent()
+        
+        // Space navigation
+        ["b"] = yabaiConfig.moveWindowToSpaceNext()
+        ["v"] = yabaiConfig.moveWindowToSpacePrev()
+        
+        // Window management
+        ["f"] = yabaiConfig.toggleWindowFloat()
+        ["equal_sign"] = yabaiConfig.balanceSpace()
+      }, 200),
+      
+      // Hyper key shortcuts
+      new karabiner.Rule {
+        description = "Hyper+H/L for space navigation"
+        manipulators = List(
+          new karabiner.Manipulator {
+            type = "basic"
+            from = new karabiner.FromEvent {
+              key_code = "h"
+              modifiers = new karabiner.Modifiers {
+                mandatory = List("left_command", "left_control", "left_option", "left_shift")
+              }
+            }
+            to = List(yabaiConfig.focusSpacePrev())
+          },
+          new karabiner.Manipulator {
+            type = "basic"
+            from = new karabiner.FromEvent {
+              key_code = "l"
+              modifiers = new karabiner.Modifiers {
+                mandatory = List("left_command", "left_control", "left_option", "left_shift")
+              }
+            }
+            to = List(yabaiConfig.focusSpaceNext())
+          }
+        )
+      },
+      
+      // Control+N/M for recent focus (using helpers)
+      new karabiner.Rule {
+        description = "Control+N/M for recent focus"
+        manipulators = List(
+          new karabiner.Manipulator {
+            type = "basic"
+            from = new karabiner.FromEvent {
+              key_code = "n"
+              modifiers = new karabiner.Modifiers {
+                mandatory = List("left_control")
+              }
+            }
+            to = List(helpers.ctrl("n"))
+          },
+          new karabiner.Manipulator {
+            type = "basic"
+            from = new karabiner.FromEvent {
+              key_code = "m"
+              modifiers = new karabiner.Modifiers {
+                mandatory = List("left_control")
+              }
+            }
+            to = List(helpers.ctrl("m"))
+          }
+        )
+      }
+    )
+  }
+}
+
+config: karabiner.Config = simpleConfig.toConfig()
