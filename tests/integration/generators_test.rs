@@ -7,8 +7,8 @@ fn test_char_range() {
     let pkl_content = r#"
 module test
 
-import "modulepath:/karabiner_pkl/lib/karabiner.pkl" as karabiner
-import "modulepath:/karabiner_pkl/lib/helpers.pkl" as helpers
+import "modulepath:/karabiner.pkl" as karabiner
+import "modulepath:/helpers.pkl" as helpers
 
 // Test char range generation
 letters = helpers.charRange("a", "e")
@@ -55,8 +55,8 @@ fn test_num_range() {
     let pkl_content = r#"
 module test
 
-import "modulepath:/karabiner_pkl/lib/karabiner.pkl" as karabiner
-import "modulepath:/karabiner_pkl/lib/helpers.pkl" as helpers
+import "modulepath:/karabiner.pkl" as karabiner
+import "modulepath:/helpers.pkl" as helpers
 
 // Test number range generation
 nums = helpers.numRange(1, 5)
@@ -102,8 +102,8 @@ fn test_qwerty_sequence() {
     let pkl_content = r#"
 module test
 
-import "modulepath:/karabiner_pkl/lib/karabiner.pkl" as karabiner
-import "modulepath:/karabiner_pkl/lib/helpers.pkl" as helpers
+import "modulepath:/karabiner.pkl" as karabiner
+import "modulepath:/helpers.pkl" as helpers
 
 // Test QWERTY sequence generation
 homeRowRight = helpers.qwertySequence("j", 4)  // j, k, l, ;
@@ -151,8 +151,8 @@ fn test_vim_home_row_navigation() {
     let pkl_content = r#"
 module test
 
-import "modulepath:/karabiner_pkl/lib/karabiner.pkl" as karabiner
-import "modulepath:/karabiner_pkl/lib/helpers.pkl" as helpers
+import "modulepath:/karabiner.pkl" as karabiner
+import "modulepath:/helpers.pkl" as helpers
 
 // Test vim home row navigation helper
 vimNav = helpers.vimHomeRowNavigation()

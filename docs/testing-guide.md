@@ -58,7 +58,7 @@ Writes a Pkl file to the temp directory.
 
 ```rust
 let pkl_file = ctx.write_pkl_file("test.pkl", r#"
-    import "modulepath:/karabiner_pkl/lib/karabiner.pkl"
+    import "modulepath:/karabiner.pkl"
     // ... configuration
 "#);
 ```
@@ -98,8 +98,8 @@ fn test_basic_functionality() {
     
     // 2. Define Pkl configuration
     let pkl_content = r#"
-        import "modulepath:/karabiner_pkl/lib/karabiner.pkl"
-        import "modulepath:/karabiner_pkl/lib/helpers.pkl"
+        import "modulepath:/karabiner.pkl"
+        import "modulepath:/helpers.pkl"
         
         simpleConfig: karabiner.SimpleConfig = new {
             complex_modifications = new karabiner.ComplexModifications {
@@ -289,7 +289,7 @@ cat ~/.local/share/karabiner-pkl/logs/karabiner-pkl.log
 - Use inline Pkl content for simple tests
 - Use fixtures for complex configurations
 - Keep fixtures minimal and focused
-- All imports should use `modulepath:/karabiner_pkl/lib/`
+- All imports should use `modulepath:/`
 
 ### 3. Assertions
 
@@ -335,8 +335,8 @@ Each test should:
 fn test_vim_navigation_helper() {
     let ctx = TestContext::new();
     let pkl_content = r#"
-        import "modulepath:/karabiner_pkl/lib/karabiner.pkl"
-        import "modulepath:/karabiner_pkl/lib/helpers.pkl"
+        import "modulepath:/karabiner.pkl"
+        import "modulepath:/helpers.pkl"
         
         simpleConfig: karabiner.SimpleConfig = new {
             complex_modifications = new karabiner.ComplexModifications {

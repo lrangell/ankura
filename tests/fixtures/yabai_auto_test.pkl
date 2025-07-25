@@ -1,8 +1,8 @@
 module yabai_auto_test
 
-import "modulepath:/karabiner_pkl/lib/karabiner.pkl" as karabiner
-import "modulepath:/karabiner_pkl/lib/helpers.pkl" as helpers
-import "modulepath:/karabiner_pkl/lib/yabai.pkl" as yabai
+import "modulepath:/karabiner.pkl" as karabiner
+import "modulepath:/helpers.pkl" as helpers
+import "modulepath:/yabai.pkl" as yabai
 
 // Test the new auto-mapping API
 yabaiConfig: yabai.Yabai = new {

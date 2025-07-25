@@ -40,8 +40,8 @@ fn test_module_path_compilation() {
     let main_content = r#"
 module test
 
-import "modulepath:/karabiner_pkl/lib/karabiner.pkl" as karabiner
-import "modulepath:/karabiner_pkl/lib/helpers.pkl" as helpers
+import "modulepath:/karabiner.pkl" as karabiner
+import "modulepath:/helpers.pkl" as helpers
 
 simpleConfig: karabiner.SimpleConfig = new {
   profileName = "test-profile"

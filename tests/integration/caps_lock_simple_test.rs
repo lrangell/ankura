@@ -7,8 +7,8 @@ fn test_caps_lock_to_escape_simple() {
     let pkl_content = r#"
 module test
 
-import "modulepath:/karabiner_pkl/lib/karabiner.pkl" as karabiner
-import "modulepath:/karabiner_pkl/lib/helpers.pkl" as helpers
+import "modulepath:/karabiner.pkl" as karabiner
+import "modulepath:/helpers.pkl" as helpers
 
 simpleConfig: karabiner.SimpleConfig = new {
   complex_modifications = new karabiner.ComplexModifications {
@@ -43,8 +43,8 @@ fn test_caps_lock_to_modifier_default() {
     let pkl_content = r#"
 module test
 
-import "modulepath:/karabiner_pkl/lib/karabiner.pkl" as karabiner
-import "modulepath:/karabiner_pkl/lib/helpers.pkl" as helpers
+import "modulepath:/karabiner.pkl" as karabiner
+import "modulepath:/helpers.pkl" as helpers
 
 simpleConfig: karabiner.SimpleConfig = new {
   complex_modifications = new karabiner.ComplexModifications {
@@ -81,8 +81,8 @@ fn test_caps_lock_to_modifier_custom() {
     let pkl_content = r#"
 module test
 
-import "modulepath:/karabiner_pkl/lib/karabiner.pkl" as karabiner
-import "modulepath:/karabiner_pkl/lib/helpers.pkl" as helpers
+import "modulepath:/karabiner.pkl" as karabiner
+import "modulepath:/helpers.pkl" as helpers
 
 simpleConfig: karabiner.SimpleConfig = new {
   complex_modifications = new karabiner.ComplexModifications {

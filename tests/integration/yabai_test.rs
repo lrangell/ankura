@@ -43,9 +43,9 @@ fn test_yabai_helpers() {
     let pkl_content = r#"
 module test
 
-import "modulepath:/karabiner_pkl/lib/karabiner.pkl" as karabiner
-import "modulepath:/karabiner_pkl/lib/helpers.pkl" as helpers
-import "modulepath:/karabiner_pkl/lib/yabai.pkl" as yabai
+import "modulepath:/karabiner.pkl" as karabiner
+import "modulepath:/helpers.pkl" as helpers
+import "modulepath:/yabai.pkl" as yabai
 
 // Test the new helper functions
 testYabai: yabai.Yabai = new {

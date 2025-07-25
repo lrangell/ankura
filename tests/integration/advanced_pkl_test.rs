@@ -7,8 +7,8 @@ fn test_anonymous_functions() {
     let pkl_content = r#"
 module test
 
-import "modulepath:/karabiner_pkl/lib/karabiner.pkl" as karabiner
-import "modulepath:/karabiner_pkl/lib/helpers.pkl" as helpers
+import "modulepath:/karabiner.pkl" as karabiner
+import "modulepath:/helpers.pkl" as helpers
 
 // Test anonymous functions with map
 simpleConfig: karabiner.SimpleConfig = new {
@@ -68,8 +68,8 @@ fn test_let_expressions() {
     let pkl_content = r#"
 module test
 
-import "modulepath:/karabiner_pkl/lib/karabiner.pkl" as karabiner
-import "modulepath:/karabiner_pkl/lib/helpers.pkl" as helpers
+import "modulepath:/karabiner.pkl" as karabiner
+import "modulepath:/helpers.pkl" as helpers
 
 // Test let expressions
 simpleConfig: karabiner.SimpleConfig = new {
@@ -131,8 +131,8 @@ fn test_complex_layer_with_classes() {
     let pkl_content = r#"
 module test
 
-import "modulepath:/karabiner_pkl/lib/karabiner.pkl" as karabiner
-import "modulepath:/karabiner_pkl/lib/helpers.pkl" as helpers
+import "modulepath:/karabiner.pkl" as karabiner
+import "modulepath:/helpers.pkl" as helpers
 
 // Test creating a custom class for layer configuration
 class LayerConfig {
@@ -213,8 +213,8 @@ fn test_chained_operations() {
     let pkl_content = r#"
 module test
 
-import "modulepath:/karabiner_pkl/lib/karabiner.pkl" as karabiner
-import "modulepath:/karabiner_pkl/lib/helpers.pkl" as helpers
+import "modulepath:/karabiner.pkl" as karabiner
+import "modulepath:/helpers.pkl" as helpers
 
 // Test chaining operations with functional style
 simpleConfig: karabiner.SimpleConfig = new {

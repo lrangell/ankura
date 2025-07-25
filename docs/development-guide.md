@@ -142,8 +142,8 @@ fn test_my_feature() {
     
     // Write test Pkl file
     let pkl_content = r#"
-        import "modulepath:/karabiner_pkl/lib/karabiner.pkl"
-        import "modulepath:/karabiner_pkl/lib/helpers.pkl"
+        import "modulepath:/karabiner.pkl"
+        import "modulepath:/helpers.pkl"
         
         simpleConfig: karabiner.SimpleConfig = new {
             // Your test configuration

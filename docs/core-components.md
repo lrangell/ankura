@@ -111,7 +111,7 @@ struct Compiler {
 
 The compiler module now includes embedded Pkl library files using `rust_embed`:
 - Extracts `karabiner.pkl` and `helpers.pkl` at runtime
-- Makes them available via `modulepath:/karabiner_pkl/lib/`
+- Makes them available via `modulepath:/`
 
 ## Daemon Module (`src/daemon/mod.rs`)
 
@@ -264,7 +264,7 @@ Embedded Pkl library functionality is now integrated into the compiler module.
 2. **Runtime**
    - Extracts to temp directory during compiler initialization
    - Creates proper module structure
-   - Available via `modulepath:/karabiner_pkl/lib/`
+   - Available via `modulepath:/`
 
 ### Embedded Files
 

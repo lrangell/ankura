@@ -1,7 +1,7 @@
 module caps_lock_test
 
-import "modulepath:/karabiner_pkl/lib/karabiner.pkl" as karabiner
-import "modulepath:/karabiner_pkl/lib/helpers.pkl" as helpers
+import "modulepath:/karabiner.pkl" as karabiner
+import "modulepath:/helpers.pkl" as helpers
 
 // Test caps lock to escape when alone, control when held
 simpleConfig: karabiner.SimpleConfig = new {

@@ -117,7 +117,7 @@ Users can extend functionality by importing additional Pkl modules:
 1. **Local Library**: `~/.config/karabiner_pkl/lib/`
 2. **Import Command**: `karabiner-pkl add <source>` 
 3. **Sources**: Local file paths or HTTP/HTTPS URLs
-4. **Usage**: Import in Pkl files with `import "modulepath:/karabiner_pkl/lib/module.pkl"`
+4. **Usage**: Import in Pkl files with `import "modulepath:/module.pkl"`
 
 ## Error Handling
 

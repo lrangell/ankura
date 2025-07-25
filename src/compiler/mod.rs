@@ -1,9 +1,10 @@
 use crate::error::{KarabinerPklError, Result};
 use rust_embed::RustEmbed;
 use serde_json::Value;
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use tempfile::TempDir;
 use tracing::info;
 use which::which;
 
@@ -14,21 +15,19 @@ struct PklLib;
 
 pub struct Compiler {
     pkl_path: PathBuf,
-    _embedded_temp_dir: Option<TempDir>,
-    embedded_lib_path: Option<PathBuf>,
+    embedded_lib_path: PathBuf,
 }
 
 impl Compiler {
     pub fn new() -> Result<Self> {
         let pkl_path = which("pkl").map_err(|_| KarabinerPklError::PklNotFound)?;
 
-        // Extract embedded pkl-lib files once when creating the compiler
-        let (temp_dir, embedded_lib_path) = Self::extract_pkl_lib()?;
+        // Materialize embedded pkl-lib files to persistent location
+        let embedded_lib_path = Self::materialize_pkl_lib()?;
 
         Ok(Self {
             pkl_path,
-            _embedded_temp_dir: Some(temp_dir),
-            embedded_lib_path: Some(embedded_lib_path),
+            embedded_lib_path,
         })
     }
 
@@ -60,9 +59,7 @@ impl Compiler {
         let mut module_paths = vec![];
 
         // Always add the embedded library path first
-        if let Some(embedded_path) = &self.embedded_lib_path {
-            module_paths.push(embedded_path.to_string_lossy().to_string());
-        }
+        module_paths.push(self.embedded_lib_path.to_string_lossy().to_string());
 
         // Add user library directory if it exists
         if lib_dir.exists() {
@@ -208,36 +205,80 @@ impl Compiler {
         None
     }
 
-    /// Extract embedded pkl-lib files to a temporary directory with the expected structure
-    /// Returns the path to the directory containing the module structure
-    fn extract_pkl_lib() -> Result<(TempDir, PathBuf)> {
-        let temp_dir = TempDir::new().map_err(|e| KarabinerPklError::DaemonError {
-            message: format!("Failed to create temporary directory: {e}"),
+    /// Materialize embedded pkl-lib files to ~/.local/share/karabiner-pkl/
+    /// Only extracts if files are missing or outdated
+    fn materialize_pkl_lib() -> Result<PathBuf> {
+        let data_dir = dirs::data_local_dir()
+            .ok_or_else(|| KarabinerPklError::DaemonError {
+                message: "Could not find local data directory".to_string(),
+            })?
+            .join("karabiner-pkl");
+
+        // Create directory if it doesn't exist
+        std::fs::create_dir_all(&data_dir).map_err(|e| KarabinerPklError::DaemonError {
+            message: format!("Failed to create data directory: {e}"),
         })?;
 
-        // Create the expected directory structure: karabiner_pkl/lib/
-        let module_base = temp_dir.path().join("karabiner_pkl").join("lib");
-        std::fs::create_dir_all(&module_base).map_err(|e| KarabinerPklError::DaemonError {
-            message: format!("Failed to create module directory structure: {e}"),
-        })?;
+        // Calculate hash of embedded files to detect changes
+        let embedded_hash = Self::calculate_embedded_hash();
+        let hash_file = data_dir.join(".pkl-lib-hash");
 
-        // Extract all embedded pkl files
-        for file in PklLib::iter() {
-            let file_path = module_base.join(file.as_ref());
+        // Check if we need to extract
+        let should_extract = if let Ok(stored_hash) = std::fs::read_to_string(&hash_file) {
+            stored_hash.trim() != embedded_hash.to_string()
+        } else {
+            true
+        };
 
+        if should_extract {
+            info!(
+                "Extracting embedded pkl-lib files to {}",
+                data_dir.display()
+            );
+
+            // Extract all embedded pkl files
+            for file in PklLib::iter() {
+                let file_path = data_dir.join(file.as_ref());
+
+                if let Some(content) = PklLib::get(&file) {
+                    std::fs::write(&file_path, content.data).map_err(|e| {
+                        KarabinerPklError::DaemonError {
+                            message: format!(
+                                "Failed to write embedded file {}: {}",
+                                file.as_ref(),
+                                e
+                            ),
+                        }
+                    })?;
+                }
+            }
+
+            // Write hash file
+            std::fs::write(&hash_file, embedded_hash.to_string()).map_err(|e| {
+                KarabinerPklError::DaemonError {
+                    message: format!("Failed to write hash file: {e}"),
+                }
+            })?;
+        }
+
+        Ok(data_dir)
+    }
+
+    /// Calculate a hash of all embedded files to detect changes
+    fn calculate_embedded_hash() -> u64 {
+        let mut hasher = DefaultHasher::new();
+
+        // Hash all embedded files in a deterministic order
+        let mut files: Vec<_> = PklLib::iter().collect();
+        files.sort();
+
+        for file in files {
+            file.hash(&mut hasher);
             if let Some(content) = PklLib::get(&file) {
-                // Extract the file
-                std::fs::write(&file_path, content.data).map_err(|e| {
-                    KarabinerPklError::DaemonError {
-                        message: format!("Failed to write embedded file {}: {}", file.as_ref(), e),
-                    }
-                })?;
+                content.data.hash(&mut hasher);
             }
         }
 
-        // Return both the TempDir (to keep it alive) and the base path for module resolution
-        let base_path = temp_dir.path().to_path_buf();
-        // Module structure created successfully
-        Ok((temp_dir, base_path))
+        hasher.finish()
     }
 }

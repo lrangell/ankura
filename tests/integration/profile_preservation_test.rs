@@ -51,7 +51,7 @@ fn test_preserves_other_profiles() {
 
     // Create a simple pkl config that updates the "pkl" profile
     let pkl_content = r#"
-import "modulepath:/karabiner_pkl/lib/karabiner.pkl"
+import "modulepath:/karabiner.pkl"
 
 config = new karabiner.SimpleConfig {
   profileName = "pkl"
@@ -133,7 +133,7 @@ fn test_creates_new_profile_if_not_exists() {
 
     // Create a pkl config with a custom profile name
     let pkl_content = r#"
-import "modulepath:/karabiner_pkl/lib/karabiner.pkl"
+import "modulepath:/karabiner.pkl"
 
 config = new karabiner.SimpleConfig {
   profileName = "MyNewProfile"
@@ -184,7 +184,7 @@ fn test_cli_profile_override_with_output() {
 
     // Create a pkl config
     let pkl_content = r#"
-import "modulepath:/karabiner_pkl/lib/karabiner.pkl"
+import "modulepath:/karabiner.pkl"
 
 config = new karabiner.SimpleConfig {
   profileName = "ConfigProfile"

@@ -1,7 +1,7 @@
 module shift_layers_test
 
-import "modulepath:/karabiner_pkl/lib/karabiner.pkl" as karabiner
-import "modulepath:/karabiner_pkl/lib/helpers.pkl" as helpers
+import "modulepath:/karabiner.pkl" as karabiner
+import "modulepath:/helpers.pkl" as helpers
 
 // Test shift layers (semicolon and a as shift)
 simpleConfig: karabiner.SimpleConfig = new {

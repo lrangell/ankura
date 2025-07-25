@@ -186,10 +186,22 @@ pub async fn init_config(config_path: PathBuf, force: bool) -> Result<()> {
         return Ok(());
     }
 
+    // Ensure pkl files are materialized by creating a compiler instance
+    let _compiler = crate::compiler::Compiler::new()?;
+
+    // Get the actual data directory path
+    let data_dir = dirs::data_local_dir()
+        .ok_or_else(|| crate::error::KarabinerPklError::DaemonError {
+            message: "Could not find local data directory".to_string(),
+        })?
+        .join("karabiner-pkl");
+
+    println!("✅ Pkl library files ready at {}", data_dir.display());
+
     let example_config = r#"// Karabiner configuration using Pkl
 // Import the karabiner library from the embedded module path
-import "modulepath:/karabiner_pkl/lib/karabiner.pkl"
-import "modulepath:/karabiner_pkl/lib/helpers.pkl"
+import "modulepath:/karabiner.pkl"
+import "modulepath:/helpers.pkl"
 
 // Create a simple configuration
 config = new karabiner.SimpleConfig {
@@ -213,6 +225,19 @@ config = new karabiner.SimpleConfig {
 }.toConfig()
 "#;
 
+    // Create PklProject file content with the actual data directory path
+    let pkl_project = format!(
+        r#"amends "pkl:Project"
+
+evaluatorSettings {{
+  modulePath {{
+    "{}"
+  }}
+}}
+"#,
+        data_dir.display()
+    );
+
     // Ensure parent directory exists
     if let Some(parent) = config_path.parent() {
         std::fs::create_dir_all(parent).map_err(|e| KarabinerPklError::ConfigWriteError {
@@ -228,6 +253,18 @@ config = new karabiner.SimpleConfig {
         }
     })?;
 
+    // Write PklProject file in the same directory
+    if let Some(parent) = config_path.parent() {
+        let pkl_project_path = parent.join("PklProject");
+        std::fs::write(&pkl_project_path, pkl_project).map_err(|e| {
+            KarabinerPklError::ConfigWriteError {
+                path: pkl_project_path.clone(),
+                source: e,
+            }
+        })?;
+        println!("Created PklProject file at {}", pkl_project_path.display());
+    }
+
     println!("Created example configuration at {}", config_path.display());
     println!("Edit this file and run 'karabiner-pkl compile' to apply changes");
     Ok(())
@@ -241,10 +278,10 @@ pub async fn add_import(source: String, name: Option<String>) -> Result<()> {
     println!("✅ Successfully imported {source}");
     println!("You can now use it in your configuration with:");
     if let Some(ref name) = import_name {
-        println!("  import \"modulepath:/karabiner_pkl/lib/{name}\"");
+        println!("  import \"modulepath:/{name}\"");
     } else {
         let filename = source.split('/').next_back().unwrap_or("imported.pkl");
-        println!("  import \"modulepath:/karabiner_pkl/lib/{filename}\"");
+        println!("  import \"modulepath:/{filename}\"");
     }
 
     Ok(())

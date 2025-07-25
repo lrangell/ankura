@@ -333,8 +333,8 @@ const qwertyBottomRow = ["z", "x", "c", "v", "b", "n", "m", ",", ".", "/"]
 Here's a complete configuration using multiple helpers:
 
 ```pkl
-import "modulepath:/karabiner_pkl/lib/karabiner.pkl"
-import "modulepath:/karabiner_pkl/lib/helpers.pkl"
+import "modulepath:/karabiner.pkl"
+import "modulepath:/helpers.pkl"
 
 simpleConfig: karabiner.SimpleConfig = new {
   complex_modifications = new karabiner.ComplexModifications {
