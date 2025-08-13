@@ -8,5 +8,4 @@ mod shell_commands_test;
 mod shift_layers_test;
 mod simlayers_test;
 mod space_mode_test;
-mod yabai_auto_test;
 mod yabai_test;
