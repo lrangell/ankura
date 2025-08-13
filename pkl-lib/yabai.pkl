@@ -1,91 +1,540 @@
+/// Yabai window manager integration for Karabiner-Elements
+/// Provides a declarative API for generating keyboard shortcuts to control yabai
 module yabai
 
 import "karabiner.pkl"
-import "helpers.pkl"
 
+// ============================================================================
+// Base Types & Interfaces
+// ============================================================================
+
+/// Base class for all yabai mappings
+abstract class YabaiMap {
+  /// Optional modifier keys for this mapping group
+  modifiers: List<String>?
+}
+
+/// Interface for directional navigation
+abstract class DirectionalMap extends YabaiMap {
+  left: String?
+  down: String?
+  up: String?
+  right: String?
+}
+
+/// Interface for sequential navigation
+abstract class SequentialMap extends YabaiMap {
+  prev: String?
+  next: String?
+  recent: String?
+  first: String?
+  last: String?
+}
+
+/// Interface for indexed navigation
+abstract class IndexedMap extends YabaiMap {
+  items: List<String>?
+}
+
+// ============================================================================
+// Mapping Classes (Composition of interfaces)
+// ============================================================================
+
+/// Window navigation (directional + sequential)
+class WindowNav extends YabaiMap {
+  left: String = "h"
+  down: String = "j"
+  up: String = "k"
+  right: String = "l"
+  recent: String?
+  prev: String?
+  next: String?
+  first: String?
+  last: String?
+  mouse: String?
+}
+
+/// Space navigation (indexed + sequential)
+class SpaceNav extends YabaiMap {
+  spaces: List<String> = List("1", "2", "3", "4", "5", "6", "7", "8", "9")
+  prev: String?
+  next: String?
+  recent: String?
+  first: String?
+  last: String?
+}
+
+/// Display navigation (indexed + sequential)
+class DisplayNav extends YabaiMap {
+  displays: List<String>? = List("1", "2", "3")
+  prev: String?
+  next: String?
+  recent: String?
+}
+
+/// Toggle operations
+class Toggles extends YabaiMap {
+  float: String?
+  sticky: String?
+  zoom: String?
+  fullscreen: String?
+  nativeFullscreen: String?
+  split: String?
+  minimize: String?
+  gap: String?
+  padding: String?
+  topmost: String?
+  pip: String?
+  shadow: String?
+  border: String?
+}
+
+/// Layout operations
+class Layout extends YabaiMap {
+  bsp: String?
+  float: String?
+  stack: String?
+  balance: String?
+  rotate: String?
+  mirrorX: String?
+  mirrorY: String?
+}
+
+/// Resize operations
+class Resize extends YabaiMap {
+  increase: String?
+  decrease: String?
+  equalize: String?
+  left: String?
+  down: String?
+  up: String?
+  right: String?
+  topLeft: String?
+  topRight: String?
+  bottomLeft: String?
+  bottomRight: String?
+  amount: Int = 50
+}
+
+/// Ratio adjustment
+class Ratio extends YabaiMap {
+  increase: String?
+  decrease: String?
+  reset: String?
+  amount: Float = 0.1
+}
+
+/// Window insertion
+class Insert extends YabaiMap {
+  left: String?
+  down: String?
+  up: String?
+  right: String?
+  cancel: String?
+  stack: String?
+}
+
+/// Floating window movement
+class MoveFloat extends YabaiMap {
+  left: String?
+  down: String?
+  up: String?
+  right: String?
+  center: String?
+  amount: Int = 50
+}
+
+/// Grid placement
+class Grid extends YabaiMap {
+  topLeft: String?
+  top: String?
+  topRight: String?
+  left: String?
+  center: String?
+  right: String?
+  bottomLeft: String?
+  bottom: String?
+  bottomRight: String?
+  fullscreen: String?
+  leftHalf: String?
+  rightHalf: String?
+  topHalf: String?
+  bottomHalf: String?
+  leftThird: String?
+  centerThird: String?
+  rightThird: String?
+  leftTwoThirds: String?
+  rightTwoThirds: String?
+}
+
+// ============================================================================
+// Utility Classes for Generation
+// ============================================================================
+
+/// Generates manipulators with common patterns
+local class ManipulatorBuilder {
+  cmdPath: String
+  
+  /// Create a shell command event
+  function shellCommand(args: String): karabiner.ToEvent = new {
+    shell_command = "\(cmdPath) \(args)"
+  }
+  
+  /// Create a basic manipulator
+  function manipulator(key: String, modifierKeys: List<String>?, command: String): karabiner.Manipulator = new {
+    type = "basic"
+    from = new karabiner.FromEvent {
+      key_code = key
+      modifiers = if (modifierKeys != null) new karabiner.Modifiers {
+        mandatory = modifierKeys
+      } else null
+    }
+    to = List(shellCommand(command))
+  }
+  
+  /// Generate manipulators from a property mapping
+  function fromMapping(
+    properties: Mapping<String, String?>,
+    modifierKeys: List<String>?,
+    commandPrefix: String
+  ): List<karabiner.Manipulator> = 
+    properties.keys.toList()
+      .filter((key) -> properties[key] != null)
+      .map((key) -> 
+        let (keyCode = properties[key])
+        if (keyCode != null) manipulator(keyCode, modifierKeys, "\(commandPrefix) \(key)")
+        else null
+      )
+      .filter((m) -> m != null)
+  
+  /// Generate indexed manipulators (for spaces/displays)
+  function fromIndexed(
+    items: List<String>,
+    modifierKeys: List<String>?,
+    commandPrefix: String
+  ): List<karabiner.Manipulator> = 
+    items.mapIndexed((idx, key) -> 
+      manipulator(key, modifierKeys, "\(commandPrefix) \(idx + 1)")
+    )
+}
+
+/// Builds directional command mappings
+local class DirectionalBuilder {
+  function buildMapping(nav: WindowNav): Mapping<String, String?> = new {
+    ["west"] = nav.left
+    ["south"] = nav.down
+    ["north"] = nav.up
+    ["east"] = nav.right
+    ["recent"] = nav.recent
+    ["prev"] = nav.prev
+    ["next"] = nav.next
+    ["first"] = nav.first
+    ["last"] = nav.last
+    ["mouse"] = nav.mouse
+  }
+  
+  function buildSimpleMapping(map: DirectionalMap): Mapping<String, String?> = new {
+    ["west"] = map.left
+    ["south"] = map.down
+    ["north"] = map.up
+    ["east"] = map.right
+  }
+}
+
+/// Generates rules from manipulators
+local class RuleGenerator {
+  /// Package manipulators into a rule if non-empty
+  function createRule(
+    name: String,
+    manips: List<karabiner.Manipulator>,
+    modifiers: List<String>?
+  ): karabiner.Rule? = 
+    if (manips.isEmpty) null
+    else new karabiner.Rule {
+      description = if (modifiers != null)
+        "\(name) (\(modifiers.join("+")))"
+      else name
+      manipulators = manips
+    }
+}
+
+// ============================================================================
+// Main Yabai Configuration
+// ============================================================================
+
+/// Configuration for yabai integration
 class Yabai {
+  /// Path to yabai executable
   cmdPath: String = "/opt/homebrew/bin/yabai"
   
-  // Key mapping properties
+  // New API - Clean names without "Mapping" suffix
+  focusWindow: WindowNav?
+  swapWindow: WindowNav?
+  warpWindow: WindowNav?
+  moveToSpace: SpaceNav?
+  focusSpaceNav: SpaceNav?  // Renamed to avoid conflict with legacy
+  focusDisplay: DisplayNav?
+  moveToDisplay: DisplayNav?
+  toggles: Toggles?
+  layout: Layout?
+  resize: Resize?
+  ratio: Ratio?
+  insert: Insert?
+  moveFloat: MoveFloat?
+  grid: Grid?
+  
+  // Backward compatibility - support old "Mapping" suffix names
+  focusWindowMapping: WindowNav?
+  swapWindowMapping: WindowNav?
+  warpWindowMapping: WindowNav?
+  moveToSpaceMapping: SpaceNav?
+  focusSpaceMapping: SpaceNav?
+  focusDisplayMapping: DisplayNav?
+  moveToDisplayMapping: DisplayNav?
+  
+  // Legacy API for backward compatibility (old auto-mapping)
   focusSpace: List<karabiner.KeyPress>?
-  focusSpaceTrigger: String = "spacebar"  // Trigger key for focusSpace mappings
+  focusSpaceTrigger: String = "spacebar"
   prevSpace: karabiner.KeyPress?
   nextSpace: karabiner.KeyPress?
   focusRecentWindow: karabiner.KeyPress?
   focusRecentSpace: karabiner.KeyPress?
   
-  function executeYabaiCommand(args: String): karabiner.ToEvent = new {
-    shell_command = "\(cmdPath) \(args)"
-  }
+  // Utility functions
+  local function getBuilder() = 
+    let (yabaicmdPath = cmdPath)
+    new ManipulatorBuilder { cmdPath = yabaicmdPath }
+  local directional = new DirectionalBuilder {}
+  local rules = new RuleGenerator {}
   
-  function focusSpaceByIndex(index: Int): karabiner.ToEvent = 
-    executeYabaiCommand("-m space --focus \(index)")
-  
-  function focusSpaceRecent(): karabiner.ToEvent = 
-    executeYabaiCommand("-m space --focus recent")
-  
-  function focusSpacePrev(): karabiner.ToEvent = 
-    executeYabaiCommand("-m space --focus prev")
-  
-  function focusSpaceNext(): karabiner.ToEvent = 
-    executeYabaiCommand("-m space --focus next")
-  
-  function focusWindowRecent(): karabiner.ToEvent = 
-    executeYabaiCommand("-m window --focus recent")
-  
-  function focusWindowDirection(direction: "north" | "east" | "south" | "west"): karabiner.ToEvent = 
-    executeYabaiCommand("-m window --focus \(direction)")
-  
-  function focusDisplay(index: Int): karabiner.ToEvent = 
-    executeYabaiCommand("-m display --focus \(index)")
-  
-  function focusDisplayRecent(): karabiner.ToEvent = 
-    executeYabaiCommand("-m display --focus recent")
-  
-  function focusDisplayPrev(): karabiner.ToEvent = 
-    executeYabaiCommand("-m display --focus prev")
-  
-  function focusDisplayNext(): karabiner.ToEvent = 
-    executeYabaiCommand("-m display --focus next")
-  
-  function moveWindowToSpace(index: Int): karabiner.ToEvent = 
-    executeYabaiCommand("-m window --space \(index)")
-  
-  function moveWindowToSpacePrev(): karabiner.ToEvent = 
-    executeYabaiCommand("-m window --space prev")
-  
-  function moveWindowToSpaceNext(): karabiner.ToEvent = 
-    executeYabaiCommand("-m window --space next")
-  
-  function moveWindowToDisplay(index: Int): karabiner.ToEvent = 
-    executeYabaiCommand("-m window --display \(index)")
-  
-  function swapWindowDirection(direction: "north" | "east" | "south" | "west"): karabiner.ToEvent = 
-    executeYabaiCommand("-m window --swap \(direction)")
-  
-  function toggleWindowFloat(): karabiner.ToEvent = 
-    executeYabaiCommand("-m window --toggle float")
-  
-  function toggleWindowSticky(): karabiner.ToEvent = 
-    executeYabaiCommand("-m window --toggle sticky")
-  
-  function balanceSpace(): karabiner.ToEvent = 
-    executeYabaiCommand("-m space --balance")
-  
-  function createSpace(): karabiner.ToEvent = 
-    executeYabaiCommand("-m space --create")
-  
-  function destroySpace(): karabiner.ToEvent = 
-    executeYabaiCommand("-m space --destroy")
-  
-  function setSpaceLayout(layout: "bsp" | "float"): karabiner.ToEvent = 
-    executeYabaiCommand("-m space --layout \(layout)")
-  
-  function moveToNextSpace(): karabiner.ToEvent = moveWindowToSpaceNext()
-  function moveToPrevSpace(): karabiner.ToEvent = moveWindowToSpacePrev()
-  
-  // Generate Karabiner rules from configured key mappings
+  /// Generate all configured rules
   function generateRules(): List<karabiner.Rule> = 
+    let (allRules = List(
+      generateWindowRules(),
+      generateSpaceRules(),
+      generateDisplayRules(),
+      generateToggleRules(),
+      generateLayoutRules(),
+      generateResizeRules(),
+      generateMiscRules(),
+      generateLegacyRules()
+    ).flatten())
+    allRules.filter((r) -> r != null)
+  
+  // ========== Window Operations ==========
+  
+  local function generateWindowRules(): List<karabiner.Rule?> = List(
+    windowRule("Focus windows", focusWindow ?? focusWindowMapping, "-m window --focus"),
+    windowRule("Swap windows", swapWindow ?? swapWindowMapping, "-m window --swap"),
+    windowRule("Warp windows", warpWindow ?? warpWindowMapping, "-m window --warp")
+  )
+  
+  local function windowRule(name: String, nav: WindowNav?, command: String): karabiner.Rule? = 
+    if (nav == null) null
+    else rules.createRule(
+      "Yabai: \(name)",
+      getBuilder().fromMapping(directional.buildMapping(nav), nav.modifiers, command),
+      nav.modifiers
+    )
+  
+  // ========== Space Operations ==========
+  
+  local function generateSpaceRules(): List<karabiner.Rule?> = List(
+    spaceRule("Focus spaces", focusSpaceNav ?? focusSpaceMapping, "-m space --focus"),
+    spaceRule("Move to space", moveToSpace ?? moveToSpaceMapping, "-m window --space")
+  )
+  
+  local function spaceRule(name: String, nav: SpaceNav?, command: String): karabiner.Rule? = 
+    if (nav == null) null
+    else 
+      let (indexedManips = if (nav.spaces != null) 
+        getBuilder().fromIndexed(nav.spaces, nav.modifiers, command)
+      else List())
+      let (seqManips = getBuilder().fromMapping(new Mapping {
+        ["prev"] = nav.prev
+        ["next"] = nav.next
+        ["recent"] = nav.recent
+        ["first"] = nav.first
+        ["last"] = nav.last
+      }, nav.modifiers, command))
+      rules.createRule("Yabai: \(name)", indexedManips + seqManips, nav.modifiers)
+  
+  // ========== Display Operations ==========
+  
+  local function generateDisplayRules(): List<karabiner.Rule?> = List(
+    displayRule("Focus displays", focusDisplay ?? focusDisplayMapping, "-m display --focus"),
+    displayRule("Move to display", moveToDisplay ?? moveToDisplayMapping, "-m window --display")
+  )
+  
+  local function displayRule(name: String, nav: DisplayNav?, command: String): karabiner.Rule? = 
+    if (nav == null) null
+    else
+      let (indexedManips = if (nav.displays != null)
+        getBuilder().fromIndexed(nav.displays, nav.modifiers, command)
+      else List())
+      let (seqManips = getBuilder().fromMapping(new Mapping {
+        ["prev"] = nav.prev
+        ["next"] = nav.next
+        ["recent"] = nav.recent
+      }, nav.modifiers, command))
+      rules.createRule("Yabai: \(name)", indexedManips + seqManips, nav.modifiers)
+  
+  // ========== Toggle Operations ==========
+  
+  local function generateToggleRules(): List<karabiner.Rule?> = 
+    if (toggles == null) List(null)
+    else List(
+      rules.createRule(
+        "Yabai: Toggle window states",
+        getBuilder().fromMapping(new Mapping {
+          ["float"] = toggles.float
+          ["sticky"] = toggles.sticky
+          ["zoom-parent"] = toggles.zoom
+          ["zoom-fullscreen"] = toggles.fullscreen
+          ["native-fullscreen"] = toggles.nativeFullscreen
+          ["split"] = toggles.split
+          ["topmost"] = toggles.topmost
+          ["pip"] = toggles.pip
+          ["shadow"] = toggles.shadow
+          ["border"] = toggles.border
+        }, toggles.modifiers, "-m window --toggle") +
+        (if (toggles.minimize != null) List(
+          getBuilder().manipulator(toggles.minimize, toggles.modifiers, "-m window --minimize")
+        ) else List()) +
+        (if (toggles.gap != null) List(
+          getBuilder().manipulator(toggles.gap, toggles.modifiers, "-m space --toggle gap")
+        ) else List()) +
+        (if (toggles.padding != null) List(
+          getBuilder().manipulator(toggles.padding, toggles.modifiers, "-m space --toggle padding")
+        ) else List()),
+        toggles.modifiers
+      )
+    )
+  
+  // ========== Layout Operations ==========
+  
+  local function generateLayoutRules(): List<karabiner.Rule?> = 
+    if (layout == null) List(null)
+    else List(
+      rules.createRule(
+        "Yabai: Layout operations",
+        List() +
+        (if (layout.bsp != null) List(getBuilder().manipulator(layout.bsp, layout.modifiers, "-m space --layout bsp")) else List()) +
+        (if (layout.float != null) List(getBuilder().manipulator(layout.float, layout.modifiers, "-m space --layout float")) else List()) +
+        (if (layout.stack != null) List(getBuilder().manipulator(layout.stack, layout.modifiers, "-m space --layout stack")) else List()) +
+        (if (layout.balance != null) List(getBuilder().manipulator(layout.balance, layout.modifiers, "-m space --balance")) else List()) +
+        (if (layout.rotate != null) List(getBuilder().manipulator(layout.rotate, layout.modifiers, "-m space --rotate 90")) else List()) +
+        (if (layout.mirrorX != null) List(getBuilder().manipulator(layout.mirrorX, layout.modifiers, "-m space --mirror x-axis")) else List()) +
+        (if (layout.mirrorY != null) List(getBuilder().manipulator(layout.mirrorY, layout.modifiers, "-m space --mirror y-axis")) else List()),
+        layout.modifiers
+      )
+    )
+  
+  // ========== Resize Operations ==========
+  
+  local function generateResizeRules(): List<karabiner.Rule?> = 
+    if (resize == null) List(null)
+    else List(
+      rules.createRule(
+        "Yabai: Resize windows",
+        List() +
+        (if (resize.increase != null) List(getBuilder().manipulator(resize.increase, resize.modifiers, "-m window --resize bottom_right:\(resize.amount):\(resize.amount)")) else List()) +
+        (if (resize.decrease != null) List(getBuilder().manipulator(resize.decrease, resize.modifiers, "-m window --resize bottom_right:-\(resize.amount):-\(resize.amount)")) else List()) +
+        (if (resize.equalize != null) List(getBuilder().manipulator(resize.equalize, resize.modifiers, "-m space --balance")) else List()) +
+        getBuilder().fromMapping(new Mapping {
+          ["left:-\(resize.amount):0"] = resize.left
+          ["bottom:0:\(resize.amount)"] = resize.down
+          ["top:0:-\(resize.amount)"] = resize.up
+          ["right:\(resize.amount):0"] = resize.right
+          ["top_left:-\(resize.amount):-\(resize.amount)"] = resize.topLeft
+          ["top_right:\(resize.amount):-\(resize.amount)"] = resize.topRight
+          ["bottom_left:-\(resize.amount):\(resize.amount)"] = resize.bottomLeft
+          ["bottom_right:\(resize.amount):\(resize.amount)"] = resize.bottomRight
+        }, resize.modifiers, "-m window --resize"),
+        resize.modifiers
+      )
+    )
+  
+  // ========== Misc Operations ==========
+  
+  local function generateMiscRules(): List<karabiner.Rule?> = List(
+    generateRatioRule(),
+    generateInsertRule(),
+    generateMoveFloatRule(),
+    generateGridRule()
+  )
+  
+  local function generateRatioRule(): karabiner.Rule? = 
+    if (ratio == null) null
+    else rules.createRule(
+      "Yabai: Adjust window ratio",
+      List() +
+      (if (ratio.increase != null) List(getBuilder().manipulator(ratio.increase, ratio.modifiers, "-m window --ratio rel:\(ratio.amount)")) else List()) +
+      (if (ratio.decrease != null) List(getBuilder().manipulator(ratio.decrease, ratio.modifiers, "-m window --ratio rel:-\(ratio.amount)")) else List()) +
+      (if (ratio.reset != null) List(getBuilder().manipulator(ratio.reset, ratio.modifiers, "-m window --ratio abs:0.5")) else List()),
+      ratio.modifiers
+    )
+  
+  local function generateInsertRule(): karabiner.Rule? = 
+    if (insert == null) null
+    else rules.createRule(
+      "Yabai: Window insertion",
+      getBuilder().fromMapping(new Mapping {
+        ["west"] = insert.left
+        ["south"] = insert.down
+        ["north"] = insert.up
+        ["east"] = insert.right
+        ["stack"] = insert.stack
+      }, insert.modifiers, "-m window --insert") +
+      (if (insert.cancel != null) List(getBuilder().manipulator(insert.cancel, insert.modifiers, "-m window --insert cancel")) else List()),
+      insert.modifiers
+    )
+  
+  local function generateMoveFloatRule(): karabiner.Rule? = 
+    if (moveFloat == null) null
+    else rules.createRule(
+      "Yabai: Move floating windows",
+      getBuilder().fromMapping(new Mapping {
+        ["rel:-\(moveFloat.amount):0"] = moveFloat.left
+        ["rel:0:\(moveFloat.amount)"] = moveFloat.down
+        ["rel:0:-\(moveFloat.amount)"] = moveFloat.up
+        ["rel:\(moveFloat.amount):0"] = moveFloat.right
+      }, moveFloat.modifiers, "-m window --move") +
+      (if (moveFloat.center != null) List(getBuilder().manipulator(moveFloat.center, moveFloat.modifiers, "-m window --grid 1:1:0:0:1:1")) else List()),
+      moveFloat.modifiers
+    )
+  
+  local function generateGridRule(): karabiner.Rule? = 
+    if (grid == null) null
+    else rules.createRule(
+      "Yabai: Grid placement",
+      getBuilder().fromMapping(new Mapping {
+        ["3:3:0:0:1:1"] = grid.topLeft
+        ["3:3:1:0:1:1"] = grid.top
+        ["3:3:2:0:1:1"] = grid.topRight
+        ["3:3:0:1:1:1"] = grid.left
+        ["3:3:1:1:1:1"] = grid.center
+        ["3:3:2:1:1:1"] = grid.right
+        ["3:3:0:2:1:1"] = grid.bottomLeft
+        ["3:3:1:2:1:1"] = grid.bottom
+        ["3:3:2:2:1:1"] = grid.bottomRight
+        ["1:1:0:0:1:1"] = grid.fullscreen
+        ["1:2:0:0:1:1"] = grid.leftHalf
+        ["1:2:1:0:1:1"] = grid.rightHalf
+        ["2:1:0:0:1:1"] = grid.topHalf
+        ["2:1:0:1:1:1"] = grid.bottomHalf
+        ["1:3:0:0:1:1"] = grid.leftThird
+        ["1:3:1:0:1:1"] = grid.centerThird
+        ["1:3:2:0:1:1"] = grid.rightThird
+        ["1:3:0:0:2:1"] = grid.leftTwoThirds
+        ["1:3:1:0:2:1"] = grid.rightTwoThirds
+      }, grid.modifiers, "-m window --grid"),
+      grid.modifiers
+    )
+  
+  // ========== Legacy Support ==========
+  
+  local function generateLegacyRules(): List<karabiner.Rule?> = 
     let (focusSpaceRule = if (focusSpace != null)
       new karabiner.Rule {
         description = "Yabai: Focus spaces"
@@ -102,61 +551,70 @@ class Yabai {
                 key_up_order = "strict_inverse"
               }
             }
-            to = List(focusSpaceByIndex(idx + 1))
+            to = List(getBuilder().shellCommand("-m space --focus \(idx + 1)"))
           }
         )
       }
     else null)
     
-    let (navManipulators = List() +
-      (if (prevSpace != null) List(new karabiner.Manipulator {
-        type = "basic"
-        from = new karabiner.FromEvent {
-          key_code = prevSpace.key_code
-          modifiers = if (prevSpace.modifiers != null) new karabiner.Modifiers {
-            mandatory = prevSpace.modifiers
-          } else null
-        }
-        to = List(focusSpacePrev())
-      }) else List()) +
-      (if (nextSpace != null) List(new karabiner.Manipulator {
-        type = "basic"
-        from = new karabiner.FromEvent {
-          key_code = nextSpace.key_code
-          modifiers = if (nextSpace.modifiers != null) new karabiner.Modifiers {
-            mandatory = nextSpace.modifiers
-          } else null
-        }
-        to = List(focusSpaceNext())
-      }) else List()) +
-      (if (focusRecentWindow != null) List(new karabiner.Manipulator {
-        type = "basic"
-        from = new karabiner.FromEvent {
-          key_code = focusRecentWindow.key_code
-          modifiers = if (focusRecentWindow.modifiers != null) new karabiner.Modifiers {
-            mandatory = focusRecentWindow.modifiers
-          } else null
-        }
-        to = List(focusWindowRecent())
-      }) else List()) +
-      (if (focusRecentSpace != null) List(new karabiner.Manipulator {
-        type = "basic"
-        from = new karabiner.FromEvent {
-          key_code = focusRecentSpace.key_code
-          modifiers = if (focusRecentSpace.modifiers != null) new karabiner.Modifiers {
-            mandatory = focusRecentSpace.modifiers
-          } else null
-        }
-        to = List(focusSpaceRecent())
-      }) else List())
+    let (navRule = generateLegacyNavRule())
+    
+    List(focusSpaceRule, navRule).filter((r) -> r != null)
+  
+  local function generateLegacyNavRule(): karabiner.Rule? = 
+    let (manipulators = List() +
+      legacyManipulator(prevSpace, "-m space --focus prev") +
+      legacyManipulator(nextSpace, "-m space --focus next") +
+      legacyManipulator(focusRecentWindow, "-m window --focus recent") +
+      legacyManipulator(focusRecentSpace, "-m space --focus recent")
     )
     
-    let (navRule = if (!navManipulators.isEmpty) new karabiner.Rule {
+    if (manipulators.isEmpty) null
+    else new karabiner.Rule {
       description = "Yabai: Quick navigation"
-      manipulators = navManipulators
-    } else null)
-    
-    List() +
-      (if (focusSpaceRule != null) List(focusSpaceRule) else List()) +
-      (if (navRule != null) List(navRule) else List())
+      manipulators = manipulators
+    }
+  
+  local function legacyManipulator(keyPress: karabiner.KeyPress?, command: String): List<karabiner.Manipulator> = 
+    if (keyPress == null) List()
+    else List(new karabiner.Manipulator {
+      type = "basic"
+      from = new karabiner.FromEvent {
+        key_code = keyPress.key_code
+        modifiers = if (keyPress.modifiers != null) new karabiner.Modifiers {
+          mandatory = keyPress.modifiers
+        } else null
+      }
+      to = List(getBuilder().shellCommand(command))
+    })
+  
+  // ========== Legacy API Methods (for backward compatibility) ==========
+  
+  function executeYabaiCommand(args: String): karabiner.ToEvent = getBuilder().shellCommand(args)
+  
+  function focusSpaceByIndex(index: Int): karabiner.ToEvent = executeYabaiCommand("-m space --focus \(index)")
+  function focusSpaceRecent(): karabiner.ToEvent = executeYabaiCommand("-m space --focus recent")
+  function focusSpacePrev(): karabiner.ToEvent = executeYabaiCommand("-m space --focus prev")
+  function focusSpaceNext(): karabiner.ToEvent = executeYabaiCommand("-m space --focus next")
+  function focusWindowRecent(): karabiner.ToEvent = executeYabaiCommand("-m window --focus recent")
+  function focusWindowDirection(direction: "north" | "east" | "south" | "west"): karabiner.ToEvent = 
+    executeYabaiCommand("-m window --focus \(direction)")
+  function focusDisplay(index: Int): karabiner.ToEvent = executeYabaiCommand("-m display --focus \(index)")
+  function focusDisplayRecent(): karabiner.ToEvent = executeYabaiCommand("-m display --focus recent")
+  function focusDisplayPrev(): karabiner.ToEvent = executeYabaiCommand("-m display --focus prev")
+  function focusDisplayNext(): karabiner.ToEvent = executeYabaiCommand("-m display --focus next")
+  function moveWindowToSpace(index: Int): karabiner.ToEvent = executeYabaiCommand("-m window --space \(index)")
+  function moveWindowToSpacePrev(): karabiner.ToEvent = executeYabaiCommand("-m window --space prev")
+  function moveWindowToSpaceNext(): karabiner.ToEvent = executeYabaiCommand("-m window --space next")
+  function moveWindowToDisplay(index: Int): karabiner.ToEvent = executeYabaiCommand("-m window --display \(index)")
+  function swapWindowDirection(direction: "north" | "east" | "south" | "west"): karabiner.ToEvent = 
+    executeYabaiCommand("-m window --swap \(direction)")
+  function toggleWindowFloat(): karabiner.ToEvent = executeYabaiCommand("-m window --toggle float")
+  function toggleWindowSticky(): karabiner.ToEvent = executeYabaiCommand("-m window --toggle sticky")
+  function balanceSpace(): karabiner.ToEvent = executeYabaiCommand("-m space --balance")
+  function createSpace(): karabiner.ToEvent = executeYabaiCommand("-m space --create")
+  function destroySpace(): karabiner.ToEvent = executeYabaiCommand("-m space --destroy")
+  function setSpaceLayout(layout: "bsp" | "float"): karabiner.ToEvent = executeYabaiCommand("-m space --layout \(layout)")
+  function moveToNextSpace(): karabiner.ToEvent = moveWindowToSpaceNext()
+  function moveToPrevSpace(): karabiner.ToEvent = moveWindowToSpacePrev()
 }
