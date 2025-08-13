@@ -1,8 +1,11 @@
+/// Helper functions for common keyboard customization patterns
+/// Provides high-level APIs for layers, app switching, and dual-function keys
 module helpers
 
 import "karabiner.pkl"
 
-// Valid key codes - based on Karabiner-Elements documentation
+/// Valid key codes recognized by Karabiner-Elements
+/// Based on official Karabiner-Elements documentation
 const validKeyCodes: Set<String> = Set(
   // Letters (lowercase only)
   "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m",
@@ -67,13 +70,16 @@ const validKeyCodes: Set<String> = Set(
   "undo", "cut", "copy", "paste", "find", "mute", "volume_up", "volume_down"
 )
 
-// Validate a key code
+/// Validates that a key code is recognized by Karabiner-Elements
+/// @param key The key code to validate
+/// @return The validated key code
+/// @throws Error if key code is invalid
 function validateKeyCode(key: String): String = 
   if (!validKeyCodes.contains(key)) 
     throw("Invalid key code: '\(key)'. Key codes must be lowercase. Common issues: Use 'g' not 'G', 'shift' is a modifier not a key.")
   else key
 
-// Key constants
+/// Common key code constants for convenience
 a = "a"
 b = "b"
 c = "c"
@@ -154,11 +160,20 @@ f10 = "f10"
 f11 = "f11"
 f12 = "f12"
 
+/// Creates a simple one-to-one key remapping
+/// @param fromKey Key to remap from
+/// @param toKey Key to remap to
+/// @return SimpleModification for the remapping
 function remap(fromKey: String, toKey: String): karabiner.SimpleModification = new {
   from = fromKey
   to = toKey
 }
 
+/// Creates a basic manipulator with optional modifiers
+/// @param fromKey Key to trigger the mapping
+/// @param toKey Key to output
+/// @param modifiers Required modifier keys (e.g., ["left_command"])
+/// @return Basic manipulator
 function basic(
   fromKey: String, 
   toKey: String,
@@ -178,6 +193,9 @@ function basic(
   )
 }
 
+/// Maps Caps Lock to Escape when tapped, Control when held
+/// Common configuration for vim users
+/// @return Rule for dual-function Caps Lock
 function capsLockToEscapeControl(): karabiner.Rule = new {
   description = "Caps Lock to Escape when alone, Control when held"
   manipulators = List(
@@ -200,6 +218,12 @@ function capsLockToEscapeControl(): karabiner.Rule = new {
   )
 }
 
+/// Creates a layer activated by holding a modifier key
+/// @param trigger Modifier key to activate layer (e.g., "left_control")
+/// @param mappings Map of keys to their layer outputs
+/// @param threshold Simultaneous threshold in milliseconds (default: 200)
+/// @return Rule implementing the layer
+/// @example layer("left_control", new Mapping { ["h"] = "left_arrow" })
 function layer(
   trigger: String,
   mappings: Mapping<String, String | karabiner.ToEvent>,
@@ -227,6 +251,9 @@ function layer(
   )
 }
 
+/// Creates vim-style navigation bindings
+/// @param modifierKey Modifier to activate (default: "left_control")
+/// @return Rule with hjkl navigation and vim motions
 function vimNavigation(modifierKey: String?): karabiner.Rule = 
   layer(modifierKey ?? "left_control", new Mapping {
     ["h"] = left_arrow
@@ -240,6 +267,11 @@ function vimNavigation(modifierKey: String?): karabiner.Rule =
     ["x"] = delete_or_backspace
   }, null)
 
+/// Creates an app switcher layer
+/// @param trigger Modifier key to activate switcher
+/// @param apps Map of keys to application names
+/// @return Rule for quick app switching
+/// @example appSwitcher("right_command", new Mapping { ["s"] = "Safari" })
 function appSwitcher(
   trigger: String,
   apps: Mapping<String, String>
@@ -263,6 +295,10 @@ function appSwitcher(
   )
 }
 
+/// Creates a shift layer using simultaneous keys
+/// Allows typing uppercase without holding shift
+/// @param trigger Key to act as shift layer trigger
+/// @return Rule implementing shift layer for a-z and 0-9
 function shiftLayer(trigger: String): karabiner.Rule = new {
   description = "Shift Layer: \(trigger) + key"
   manipulators = charRange("a", "z").map((letter) ->
@@ -314,6 +350,10 @@ function shiftLayer(trigger: String): karabiner.Rule = new {
   )
 }
 
+/// Maps a key to Hyper (Cmd+Ctrl+Opt+Shift)
+/// Useful for global shortcuts that won't conflict
+/// @param trigger Key to convert to Hyper
+/// @return Rule implementing Hyper key
 function hyperKey(trigger: String): karabiner.Rule = new {
   description = "Hyper Key: \(trigger)"
   manipulators = List(
@@ -337,6 +377,11 @@ function hyperKey(trigger: String): karabiner.Rule = new {
   )
 }
 
+/// Creates a manipulator to launch an application
+/// @param key Trigger key
+/// @param app Application name to launch
+/// @param modifiers Optional modifier keys
+/// @return Manipulator to open the app
 function launchApp(key: String, app: String, modifiers: List<String>?): karabiner.Manipulator = new {
   type = "basic"
   from = new karabiner.FromEvent {
@@ -352,7 +397,11 @@ function launchApp(key: String, app: String, modifiers: List<String>?): karabine
   )
 }
 
-// Space Mode - spacebar acts as a modifier when held
+/// Space Mode - spacebar acts as a modifier when held
+/// Spacebar still types space when tapped alone
+/// @param mappings Keys available in space mode
+/// @param threshold Simultaneous threshold (default: 200ms)
+/// @return Rule implementing space mode
 function spaceMode(
   mappings: Mapping<String, String | karabiner.ToEvent>,
   threshold: Int?
@@ -386,7 +435,8 @@ function spaceMode(
   )
 }
 
-// Caps Lock to Escape (simple version without modifier)
+/// Maps Caps Lock to Escape (simple version)
+/// @return Rule for Caps Lock → Escape
 function capsLockToEscape(): karabiner.Rule = new {
   description = "Caps Lock to Escape"
   manipulators = List(
@@ -404,7 +454,9 @@ function capsLockToEscape(): karabiner.Rule = new {
   )
 }
 
-// Caps Lock to Modifier with Escape when alone
+/// Maps Caps Lock to modifier when held, Escape when tapped
+/// @param modifier Modifier to use (default: "right_control")
+/// @return Rule for dual-function Caps Lock
 function capsLockToModifier(modifier: String?): karabiner.Rule = new {
   description = "Caps Lock to \(modifier ?? "right_control") when held, Escape when alone"
   manipulators = List(
@@ -427,7 +479,10 @@ function capsLockToModifier(modifier: String?): karabiner.Rule = new {
   )
 }
 
-// Generate a range of characters
+/// Generates a range of characters (a-z or 0-9)
+/// @param start Starting character
+/// @param end Ending character (inclusive)
+/// @return List of characters in range
 function charRange(start: String, end: String): List<String> = 
   let (alphabet = List("a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"))
   let (digits = List("0", "1", "2", "3", "4", "5", "6", "7", "8", "9"))
@@ -437,16 +492,22 @@ function charRange(start: String, end: String): List<String> =
   if (startIdx == -1 || endIdx == -1) throw("Invalid character range: \(start) to \(end)")
   else allChars.sublist(startIdx, endIdx + 1)
 
-// Generate number strings
+/// Generates a range of number strings
+/// @param start Starting number
+/// @param end Ending number (inclusive)
+/// @return List of number strings
 function numRange(start: Int, end: Int): List<String> = 
   IntSeq(start, end).toList().map((n) -> n.toString())
 
-// Generate QWERTY row sequences
+/// QWERTY keyboard layout rows for sequential key mappings
 qwertyTopRow = List("q", "w", "e", "r", "t", "y", "u", "i", "o", "p", "open_bracket", "close_bracket")
 qwertyHomeRow = List("a", "s", "d", "f", "g", "h", "j", "k", "l", "semicolon", "quote")
 qwertyBottomRow = List("z", "x", "c", "v", "b", "n", "m", "comma", "period", "slash")
 
-// Helper to get contiguous keys from QWERTY layout
+/// Gets contiguous keys from QWERTY layout
+/// @param startKey Starting key on keyboard
+/// @param length Number of keys to include
+/// @return List of sequential QWERTY keys
 function qwertySequence(startKey: String, length: Int): List<String> = 
   let (allKeys = qwertyTopRow + qwertyHomeRow + qwertyBottomRow)
   let (startIdx = allKeys.indexOf(startKey))
@@ -454,7 +515,8 @@ function qwertySequence(startKey: String, length: Int): List<String> =
   else if (startIdx + length > allKeys.length) allKeys.sublist(startIdx, allKeys.length)
   else allKeys.sublist(startIdx, startIdx + length)
 
-// Generate vim-style navigation bindings
+/// Standard vim home row navigation mapping
+/// @return Mapping of hjkl to arrow keys
 function vimHomeRowNavigation(): Mapping<String, String> = new {
   ["h"] = left_arrow
   ["j"] = down_arrow
@@ -462,7 +524,12 @@ function vimHomeRowNavigation(): Mapping<String, String> = new {
   ["l"] = right_arrow
 }
 
-// Simlayer - trigger key acts as layer when held with other keys
+/// Simlayer - trigger key acts as layer when held with other keys
+/// Uses simultaneous key detection for layer activation
+/// @param trigger Key that activates the layer
+/// @param mappings Layer key mappings
+/// @param threshold Detection threshold (default: 200ms)
+/// @return Rule implementing the simlayer
 function simlayer(
   trigger: String,
   mappings: Mapping<String, String | karabiner.ToEvent>,
@@ -494,8 +561,11 @@ function simlayer(
   )
 }
 
-// Creates a mapping of keys to their index positions (1-based)
-// Useful for creating focus space mappings with yabai
+/// Creates a mapping of keys to their index positions (1-based)
+/// Useful for creating focus space mappings with yabai
+/// @param trigger Layer trigger key (unused but kept for API consistency)
+/// @param keys List of keys to map
+/// @return Mapping of keys to 1-based indices
 function simlayerKeys(
   trigger: String,
   keys: List<String>
@@ -504,8 +574,11 @@ function simlayerKeys(
     ...keys.toMap((key) -> key, (key) -> keys.indexOf(key) + 1)
   }
 
-// Creates a list of KeyPress objects for the given keys
-// These will be used as trigger keys for simultaneous key detection
+/// Creates a list of KeyPress objects for the given keys
+/// Used as trigger keys for simultaneous key detection
+/// @param trigger Layer trigger key (unused but kept for API consistency)
+/// @param keys List of key codes
+/// @return List of KeyPress objects
 function simlayerKeyPresses(
   trigger: String,
   keys: List<String>
@@ -514,6 +587,9 @@ function simlayerKeyPresses(
     key_code = validateKeyCode(key)
   })
 
+/// Creates a KeyPress with Hyper modifier (Cmd+Ctrl+Opt+Shift)
+/// @param key Key to press with Hyper
+/// @return KeyPress with all modifiers
 function hyperkey(key: String): karabiner.KeyPress = new {
   key_code = validateKeyCode(key)
   modifiers = List(
@@ -524,14 +600,25 @@ function hyperkey(key: String): karabiner.KeyPress = new {
   )
 }
 
+/// Creates a KeyPress with Control modifier
+/// @param key Key to press with Control
+/// @return KeyPress with Control modifier
 function ctrl(key: String): karabiner.KeyPress = new {
   key_code = validateKeyCode(key)
   modifiers = List("left_control")
 }
 
+/// Creates a range of number strings
+/// @param start Starting number
+/// @param end Ending number (inclusive)
+/// @return List of number strings
 function range(start: Int, end: Int): List<String> = 
   IntSeq(start, end).toList().map((n) -> n.toString())
 
+/// Gets a range of keys from QWERTY layout
+/// @param startKey Starting key
+/// @param endKey Ending key (must come after startKey)
+/// @return List of keys in QWERTY order
 function qwertyRange(startKey: String, endKey: String): List<String> = 
   let (allKeys = qwertyTopRow + qwertyHomeRow + qwertyBottomRow)
   let (startIdx = allKeys.indexOf(startKey))
