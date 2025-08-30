@@ -1,19 +1,15 @@
-/// Test for enhanced yabai helper module
 module yabai_enhanced_test
 
 import "modulepath:/karabiner.pkl" as karabiner
 import "modulepath:/yabai.pkl" as yabai
-
-/// Test minimal configuration
 local minimalYabai = new yabai.Yabai {
-  focusWindowMapping = new yabai.FocusWindowMapping {
+  focusWindow = new yabai.WindowNav {
     modifiers = List("command", "option")
   }
 }
 
-/// Test complete configuration
 local completeYabai = new yabai.Yabai {
-  focusWindowMapping = new yabai.FocusWindowMapping {
+  focusWindow = new yabai.WindowNav {
     modifiers = List("option")
     left = "h"
     down = "j"
@@ -22,7 +18,7 @@ local completeYabai = new yabai.Yabai {
     recent = "tab"
   }
   
-  swapWindowMapping = new yabai.SwapWindowMapping {
+  swapWindow = new yabai.WindowNav {
     modifiers = List("option", "shift")
     left = "h"
     down = "j"
@@ -30,7 +26,7 @@ local completeYabai = new yabai.Yabai {
     right = "l"
   }
   
-  warpWindowMapping = new yabai.WarpWindowMapping {
+  warpWindow = new yabai.WindowNav {
     modifiers = List("option", "command")
     left = "h"
     down = "j"
@@ -38,7 +34,7 @@ local completeYabai = new yabai.Yabai {
     right = "l"
   }
   
-  focusSpaceMapping = new yabai.FocusSpaceMapping {
+  focusSpace = new yabai.SpaceNav {
     modifiers = List("command")
     spaces = List("1", "2", "3", "4", "5")
     prev = "bracketleft"
@@ -46,26 +42,26 @@ local completeYabai = new yabai.Yabai {
     recent = "grave_accent_and_tilde"
   }
   
-  moveToSpaceMapping = new yabai.MoveToSpaceMapping {
+  moveToSpace = new yabai.SpaceNav {
     modifiers = List("command", "shift")
     spaces = List("1", "2", "3", "4", "5")
     prev = "comma"
     next = "period"
   }
   
-  focusDisplayMapping = new yabai.DisplayMapping {
+  focusDisplay = new yabai.DisplayNav {
     modifiers = List("command", "option")
     displays = List("1", "2")
     prev = "left_arrow"
     next = "right_arrow"
   }
   
-  moveToDisplayMapping = new yabai.MoveToDisplayMapping {
+  moveToDisplay = new yabai.DisplayNav {
     modifiers = List("command", "option", "shift")
     displays = List("1", "2")
   }
   
-  toggles = new yabai.TogglesMapping {
+  toggles = new yabai.Toggles {
     modifiers = List("command", "option", "shift")
     float = "f"
     sticky = "s"
@@ -76,7 +72,7 @@ local completeYabai = new yabai.Yabai {
     padding = "p"
   }
   
-  layout = new yabai.LayoutMapping {
+  layout = new yabai.Layout {
     modifiers = List("command", "option", "control")
     bsp = "b"
     float = "f"
@@ -86,7 +82,7 @@ local completeYabai = new yabai.Yabai {
     mirrorY = "y"
   }
   
-  resize = new yabai.ResizeMapping {
+  resize = new yabai.Resize {
     modifiers = List("control", "option")
     increase = "plus"
     decrease = "minus"
@@ -98,7 +94,7 @@ local completeYabai = new yabai.Yabai {
     amount = 100
   }
   
-  ratio = new yabai.RatioMapping {
+  ratio = new yabai.Ratio {
     modifiers = List("control", "option", "shift")
     increase = "plus"
     decrease = "minus"
@@ -106,7 +102,7 @@ local completeYabai = new yabai.Yabai {
     amount = 0.05
   }
   
-  insert = new yabai.InsertMapping {
+  insert = new yabai.Insert {
     modifiers = List("control", "command")
     left = "h"
     down = "j"
@@ -116,7 +112,7 @@ local completeYabai = new yabai.Yabai {
     cancel = "escape"
   }
   
-  moveFloating = new yabai.MoveFloatingMapping {
+  moveFloat = new yabai.MoveFloat {
     modifiers = List("control", "shift")
     left = "left_arrow"
     down = "down_arrow"
@@ -126,7 +122,7 @@ local completeYabai = new yabai.Yabai {
     amount = 25
   }
   
-  grid = new yabai.GridMapping {
+  grid = new yabai.Grid {
     modifiers = List("control", "command", "option")
     leftHalf = "left_arrow"
     rightHalf = "right_arrow"
@@ -141,15 +137,14 @@ local completeYabai = new yabai.Yabai {
   }
 }
 
-/// Test hyper key configuration
 local hyperYabai = new yabai.Yabai {
   local hyperKey = List("command", "option", "control", "shift")
   
-  focusWindowMapping = new yabai.FocusWindowMapping {
+  focusWindow = new yabai.WindowNav {
     modifiers = hyperKey
   }
   
-  swapWindowMapping = new yabai.SwapWindowMapping {
+  swapWindow = new yabai.WindowNav {
     modifiers = hyperKey
     left = "h"
     down = "j"
@@ -157,16 +152,15 @@ local hyperYabai = new yabai.Yabai {
     right = "l"
   }
   
-  toggles = new yabai.TogglesMapping {
+  toggles = new yabai.Toggles {
     modifiers = hyperKey
     float = "f"
     fullscreen = "m"
   }
 }
 
-/// Test arrow keys configuration
 local arrowYabai = new yabai.Yabai {
-  focusWindowMapping = new yabai.FocusWindowMapping {
+  focusWindow = new yabai.WindowNav {
     modifiers = List("command")
     left = "left_arrow"
     down = "down_arrow"
@@ -174,7 +168,7 @@ local arrowYabai = new yabai.Yabai {
     right = "right_arrow"
   }
   
-  swapWindowMapping = new yabai.SwapWindowMapping {
+  swapWindow = new yabai.WindowNav {
     modifiers = List("command", "shift")
     left = "left_arrow"
     down = "down_arrow"
@@ -183,7 +177,6 @@ local arrowYabai = new yabai.Yabai {
   }
 }
 
-/// Generate configuration for Karabiner
 config: karabiner.Config = new {
   profiles = List(
     new karabiner.Profile {
