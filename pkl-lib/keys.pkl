@@ -1,0 +1,199 @@
+module keys
+
+// Letters a-z
+a = "a"
+b = "b"
+c = "c"
+d = "d"
+e = "e"
+f = "f"
+g = "g"
+h = "h"
+i = "i"
+j = "j"
+k = "k"
+l = "l"
+m = "m"
+n = "n"
+o = "o"
+p = "p"
+q = "q"
+r = "r"
+s = "s"
+t = "t"
+u = "u"
+v = "v"
+w = "w"
+x = "x"
+y = "y"
+z = "z"
+
+// Numbers 0-9
+zero = "0"
+one = "1"
+two = "2"
+three = "3"
+four = "4"
+five = "5"
+six = "6"
+seven = "7"
+eight = "8"
+nine = "9"
+
+// Common aliases for numbers
+num0 = "0"
+num1 = "1"
+num2 = "2"
+num3 = "3"
+num4 = "4"
+num5 = "5"
+num6 = "6"
+num7 = "7"
+num8 = "8"
+num9 = "9"
+
+// Special keys
+spacebar = "spacebar"
+space = "spacebar"
+tab = "tab"
+escape = "escape"
+esc = "escape"
+enter = "return_or_enter"
+return_or_enter = "return_or_enter"
+`delete` = "delete_or_backspace"
+delete_or_backspace = "delete_or_backspace"
+backspace = "delete_or_backspace"
+delete_forward = "delete_forward"
+
+// Arrow keys
+left_arrow = "left_arrow"
+right_arrow = "right_arrow"
+up_arrow = "up_arrow"
+down_arrow = "down_arrow"
+left = "left_arrow"
+right = "right_arrow"
+up = "up_arrow"
+down = "down_arrow"
+
+// Modifiers
+left_command = "left_command"
+left_control = "left_control"
+left_option = "left_option"
+left_shift = "left_shift"
+right_command = "right_command"
+right_control = "right_control"
+right_option = "right_option"
+right_shift = "right_shift"
+cmd = "left_command"
+ctrl = "left_control"
+control = "left_control"
+opt = "left_option"
+option = "left_option"
+shift = "left_shift"
+fn = "fn"
+
+// Function keys
+f1 = "f1"
+f2 = "f2"
+f3 = "f3"
+f4 = "f4"
+f5 = "f5"
+f6 = "f6"
+f7 = "f7"
+f8 = "f8"
+f9 = "f9"
+f10 = "f10"
+f11 = "f11"
+f12 = "f12"
+
+// Punctuation
+semicolon = "semicolon"
+comma = "comma"
+period = "period"
+slash = "slash"
+backslash = "backslash"
+quote = "quote"
+grave_accent_and_tilde = "grave_accent_and_tilde"
+grave = "grave_accent_and_tilde"
+hyphen = "hyphen"
+equal_sign = "equal_sign"
+equal = "equal_sign"
+open_bracket = "open_bracket"
+close_bracket = "close_bracket"
+
+// Navigation
+page_up = "page_up"
+page_down = "page_down"
+home = "home"
+end = "end"
+
+// Caps lock
+caps_lock = "caps_lock"
+caps = "caps_lock"
+
+// Media keys
+play_or_pause = "play_or_pause"
+play_pause = "play_or_pause"
+play = "play_or_pause"
+volume_increment = "volume_increment"
+volume_decrement = "volume_decrement"
+volume_up = "volume_increment"
+volume_down = "volume_decrement"
+mute = "mute"
+
+// Common key sets for validation
+const validKeyCodes: Set<String> = Set(
+  "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m",
+  "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z",
+  
+  "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
+  
+  "f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "f10", "f11", "f12",
+  "f13", "f14", "f15", "f16", "f17", "f18", "f19", "f20", "f21", "f22", "f23", "f24",
+  
+  "escape", "return_or_enter", "tab", "spacebar", "hyphen", "equal_sign",
+  "open_bracket", "close_bracket", "backslash", "non_us_pound", "semicolon",
+  "quote", "grave_accent_and_tilde", "comma", "period", "slash", "non_us_backslash",
+  
+  "caps_lock", "scroll_lock", "num_lock",
+  
+  "left_shift", "left_control", "left_option", "left_command",
+  "right_shift", "right_control", "right_option", "right_command",
+  "fn",
+  
+  "up_arrow", "down_arrow", "left_arrow", "right_arrow",
+  
+  "page_up", "page_down", "home", "end",
+  
+  "delete_or_backspace", "delete_forward",
+  
+  "print_screen", "pause", "insert",
+  
+  "volume_up", "volume_down", "mute",
+  "play", "stop", "rewind", "fast_forward",
+  "brightness_up", "brightness_down",
+  
+  "keypad_0", "keypad_1", "keypad_2", "keypad_3", "keypad_4",
+  "keypad_5", "keypad_6", "keypad_7", "keypad_8", "keypad_9",
+  "keypad_num_lock", "keypad_slash", "keypad_asterisk", "keypad_hyphen",
+  "keypad_plus", "keypad_enter", "keypad_period", "keypad_equal_sign",
+  "keypad_comma",
+  
+  "international1", "international2", "international3", "international4",
+  "international5", "international6", "international7", "international8",
+  "international9", "lang1", "lang2", "lang3", "lang4", "lang5",
+  "lang6", "lang7", "lang8", "lang9",
+  
+  "japanese_eisuu", "japanese_kana", "japanese_pc_nfer", "japanese_pc_xfer",
+  "japanese_pc_katakana",
+  
+  "help", "menu", "application", "power", "execute", "find", "select", "again",
+  "undo", "cut", "copy", "paste", "find", "mute", "volume_up", "volume_down",
+  
+  "play_or_pause", "volume_increment", "volume_decrement"
+)
+
+function validateKeyCode(key: String): String = 
+  if (!validKeyCodes.contains(key)) 
+    throw("Invalid key code: '\(key)'. Key codes must be lowercase. Common issues: Use 'g' not 'G', 'shift' is a modifier not a key.")
+  else key

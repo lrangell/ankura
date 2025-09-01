@@ -1,0 +1,113 @@
+module actions
+
+import "karabiner.pkl"
+
+// Launch an application by name
+function launchApp(appName: String): karabiner.ToEvent = new karabiner.ToEvent {
+  shell_command = "open -a \"\(appName)\""
+}
+
+// Run a shell command
+function runShell(command: String): karabiner.ToEvent = new karabiner.ToEvent {
+  shell_command = command
+}
+
+// Run a binary with arguments
+function runBin(binPath: String, args: List<String> = List()): karabiner.ToEvent = new karabiner.ToEvent {
+  shell_command = "\(binPath)\(if (args.isEmpty) "" else " " + args.map((arg) -> "\"\(arg)\"").join(" "))"
+}
+
+// Focus or launch an application (focus if running, launch if not)
+function focusOrLaunchApp(appName: String): karabiner.ToEvent = new karabiner.ToEvent {
+  shell_command = "osascript -e 'tell application \"\(appName)\" to activate' || open -a \"\(appName)\""
+}
+
+// Open a URL
+function openUrl(url: String): karabiner.ToEvent = new karabiner.ToEvent {
+  shell_command = "open \"\(url)\""
+}
+
+// Open a file or directory
+function openPath(path: String): karabiner.ToEvent = new karabiner.ToEvent {
+  shell_command = "open \"\(path)\""
+}
+
+// Type text (using osascript)
+function typeText(text: String): karabiner.ToEvent = new karabiner.ToEvent {
+  shell_command = "osascript -e 'tell application \"System Events\" to keystroke \"\(text)\" as text'"
+}
+
+// Show notification
+function showNotification(title: String, message: String = ""): karabiner.ToEvent = new karabiner.ToEvent {
+  shell_command = "osascript -e 'display notification \"\(message)\" with title \"\(title)\"'"
+}
+
+// Lock screen
+function lockScreen(): karabiner.ToEvent = new karabiner.ToEvent {
+  shell_command = "pmset displaysleepnow"
+}
+
+// Sleep system
+function sleep(): karabiner.ToEvent = new karabiner.ToEvent {
+  shell_command = "pmset sleepnow"
+}
+
+// Restart system
+function restart(): karabiner.ToEvent = new karabiner.ToEvent {
+  shell_command = "sudo reboot"
+}
+
+// Shutdown system
+function shutdown(): karabiner.ToEvent = new karabiner.ToEvent {
+  shell_command = "sudo shutdown -h now"
+}
+
+// Volume controls
+function volumeUp(): karabiner.ToEvent = new karabiner.ToEvent {
+  shell_command = "osascript -e 'set volume output volume (output volume of (get volume settings) + 10)'"
+}
+
+function volumeDown(): karabiner.ToEvent = new karabiner.ToEvent {
+  shell_command = "osascript -e 'set volume output volume (output volume of (get volume settings) - 10)'"
+}
+
+function mute(): karabiner.ToEvent = new karabiner.ToEvent {
+  shell_command = "osascript -e 'set volume output muted not (output muted of (get volume settings))'"
+}
+
+// Brightness controls
+function brightnessUp(): karabiner.ToEvent = new karabiner.ToEvent {
+  shell_command = "osascript -e 'tell application \"System Events\" to key code 144'"
+}
+
+function brightnessDown(): karabiner.ToEvent = new karabiner.ToEvent {
+  shell_command = "osascript -e 'tell application \"System Events\" to key code 145'"
+}
+
+
+// Git shortcuts
+function gitStatus(): karabiner.ToEvent = runShell("git status")
+function gitPush(): karabiner.ToEvent = runShell("git push")
+function gitPull(): karabiner.ToEvent = runShell("git pull")
+function gitLog(): karabiner.ToEvent = runShell("git log --oneline -10")
+
+// Development shortcuts
+function vscode(path: String = "."): karabiner.ToEvent = runShell("code \(path)")
+function npmTest(): karabiner.ToEvent = runShell("npm test")
+function npmBuild(): karabiner.ToEvent = runShell("npm run build")
+function npmStart(): karabiner.ToEvent = runShell("npm start")
+
+// Common file operations
+function newFile(path: String): karabiner.ToEvent = runShell("touch \"\(path)\"")
+function deleteFile(path: String): karabiner.ToEvent = runShell("rm \"\(path)\"")
+function copyFile(from: String, to: String): karabiner.ToEvent = runShell("cp \"\(from)\" \"\(to)\"")
+function moveFile(from: String, to: String): karabiner.ToEvent = runShell("mv \"\(from)\" \"\(to)\"")
+
+// Screenshot shortcuts
+function screenshot(): karabiner.ToEvent = runShell("screencapture -c")
+function screenshotSelection(): karabiner.ToEvent = runShell("screencapture -c -s")
+function screenshotWindow(): karabiner.ToEvent = runShell("screencapture -c -w")
+
+// Clipboard operations
+function copyToClipboard(text: String): karabiner.ToEvent = runShell("echo \"\(text)\" | pbcopy")
+function pasteFromClipboard(): karabiner.ToEvent = runShell("pbpaste")
