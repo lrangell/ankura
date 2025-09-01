@@ -9,25 +9,35 @@ yabaiConfig: yabai.Yabai = new yabai.Yabai {}
 simpleModifications: List<karabiner.SimpleModification> = List()
 devices: List<karabiner.Device> = List()
 
-// Helper function to process rules - automatically call .build() if available
+// Helper function to process rules - automatically call .build() on constructor classes
 local function processRules(ruleList: List<Any>): List<karabiner.Rule> =
   ruleList.map((rule) ->
-    if (rule.hasProperty("build"))
+    let (className = rule.getClass().toString())
+    if (className == "karabiner#DualUse" || className == "karabiner#SimLayer" || className == "karabiner#Layer")
       rule.build()
+    else if (rule.hasProperty("build"))
+      rule.build
     else
       rule as karabiner.Rule
   ).toList()
 
-// Export as 'config' for compatibility with existing compiler
-config: karabiner.Config = new karabiner.Config {
-  profiles = List(new karabiner.Profile {
-    name = this.name
+// Generate the karabiner configuration fields directly as module output
+title: String = "Karabiner-Pkl Configuration"
+profiles: List<karabiner.Profile> = 
+  let (profileName = name)
+  let (profileSettings = settings)  
+  let (profileRules = rules)
+  let (profileYabaiConfig = yabaiConfig)
+  let (profileSimpleModifications = simpleModifications)
+  let (profileDevices = devices)
+  List(new karabiner.Profile {
+    name = profileName
     selected = true
     complex_modifications = new karabiner.ComplexModifications {
-      parameters = settings
-      rules = processRules(rules) + yabaiConfig.build
+      parameters = profileSettings
+      rules = processRules(profileRules) + profileYabaiConfig.build
     }
-    simple_modifications = simpleModifications
-    devices = devices
+    simple_modifications = profileSimpleModifications
+    devices = profileDevices
   })
-}
+global: karabiner.Global?
