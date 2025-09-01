@@ -1,0 +1,62 @@
+amends "pkl:test"
+
+import "../pkl-lib/helpers.pkl" as h
+import "../pkl-lib/karabiner.pkl" as k
+import "../pkl-lib/keys.pkl"
+
+local capsToEscRule = h.capsToEsc()
+local capsToCtrlEscRule = h.capsToCtrlEsc()
+local vimNavigationRule = h.vimNavigation()
+local spaceToCtrlRule = h.spaceToCtrl()
+
+facts {
+  ["capsToEsc helper should create correct rule"] {
+    // Should be a Rule type
+    capsToEscRule is k.Rule
+  }
+  
+  ["capsToCtrlEsc helper should create correct rule"] {
+    // Should be a Rule type
+    capsToCtrlEscRule is k.Rule
+  }
+  
+  ["vimNavigation helper should create correct rule"] {
+    // Should be a Rule type
+    vimNavigationRule is k.Rule
+  }
+  
+  ["spaceToCtrl helper should create correct rule"] {
+    // Should be a Rule type  
+    spaceToCtrlRule is k.Rule
+  }
+  
+  ["shell helper should create correct ToEvent"] {
+    local shellEvent = h.shell("echo test")
+    shellEvent is k.ToEvent
+  }
+}
+
+examples {
+  ["capsToEsc helper output"] {
+    h.capsToEsc()
+  }
+  
+  ["capsToCtrlEsc helper output"] {
+    h.capsToCtrlEsc()
+  }
+  
+  ["vimNavigation helper output"] {
+    h.vimNavigation()
+  }
+  
+  ["spaceToCtrl helper output"] {
+    h.spaceToCtrl()
+  }
+  
+  ["Complete config with helpers"] {
+    k.config("helpers-test", List(
+      h.capsToCtrlEsc(),
+      h.vimNavigation()
+    ))
+  }
+}

@@ -1,0 +1,372 @@
+examples {
+  ["Layer generates correct JSON output"] {
+    new {
+      description = "Layer with left_command"
+      manipulators = List(new {
+        type = "basic"
+        from {
+          key_code = "j"
+          consumer_key_code = null
+          pointing_button = null
+          modifiers {
+            mandatory = List("left_command")
+            optional = null
+          }
+          simultaneous = null
+          simultaneous_options = null
+        }
+        to = List(new {
+          key_code = "left_arrow"
+          consumer_key_code = null
+          pointing_button = null
+          shell_command = null
+          select_input_source = null
+          set_variable = null
+          mouse_key = null
+          sticky_modifier = null
+          modifiers = null
+          lazy = null
+          repeat = null
+          halt = null
+          hold_down_milliseconds = null
+        })
+        to_if_alone = null
+        to_after_key_up = null
+        to_delayed_action = null
+        conditions = null
+        parameters = null
+      }, new {
+        type = "basic"
+        from {
+          key_code = "k"
+          consumer_key_code = null
+          pointing_button = null
+          modifiers {
+            mandatory = List("left_command")
+            optional = null
+          }
+          simultaneous = null
+          simultaneous_options = null
+        }
+        to = List(new {
+          key_code = "down_arrow"
+          consumer_key_code = null
+          pointing_button = null
+          shell_command = null
+          select_input_source = null
+          set_variable = null
+          mouse_key = null
+          sticky_modifier = null
+          modifiers = null
+          lazy = null
+          repeat = null
+          halt = null
+          hold_down_milliseconds = null
+        })
+        to_if_alone = null
+        to_after_key_up = null
+        to_delayed_action = null
+        conditions = null
+        parameters = null
+      })
+    }
+  }
+  ["SimLayer generates correct JSON output"] {
+    new {
+      description = "Simultaneous f layer"
+      manipulators = List(new {
+        type = "basic"
+        from {
+          key_code = null
+          consumer_key_code = null
+          pointing_button = null
+          modifiers = null
+          simultaneous = List(new {
+            key_code = "f"
+            consumer_key_code = null
+            pointing_button = null
+            modifiers = null
+            simultaneous = null
+            simultaneous_options = null
+          }, new {
+            key_code = "j"
+            consumer_key_code = null
+            pointing_button = null
+            modifiers = null
+            simultaneous = null
+            simultaneous_options = null
+          })
+          simultaneous_options = null
+        }
+        to = List(new {
+          key_code = "left_arrow"
+          consumer_key_code = null
+          pointing_button = null
+          shell_command = null
+          select_input_source = null
+          set_variable = null
+          mouse_key = null
+          sticky_modifier = null
+          modifiers = null
+          lazy = null
+          repeat = null
+          halt = null
+          hold_down_milliseconds = null
+        })
+        to_if_alone = null
+        to_after_key_up = null
+        to_delayed_action = null
+        conditions = null
+        parameters = null
+      }, new {
+        type = "basic"
+        from {
+          key_code = null
+          consumer_key_code = null
+          pointing_button = null
+          modifiers = null
+          simultaneous = List(new {
+            key_code = "f"
+            consumer_key_code = null
+            pointing_button = null
+            modifiers = null
+            simultaneous = null
+            simultaneous_options = null
+          }, new {
+            key_code = "k"
+            consumer_key_code = null
+            pointing_button = null
+            modifiers = null
+            simultaneous = null
+            simultaneous_options = null
+          })
+          simultaneous_options = null
+        }
+        to = List(new {
+          key_code = "down_arrow"
+          consumer_key_code = null
+          pointing_button = null
+          shell_command = null
+          select_input_source = null
+          set_variable = null
+          mouse_key = null
+          sticky_modifier = null
+          modifiers = null
+          lazy = null
+          repeat = null
+          halt = null
+          hold_down_milliseconds = null
+        })
+        to_if_alone = null
+        to_after_key_up = null
+        to_delayed_action = null
+        conditions = null
+        parameters = null
+      })
+    }
+  }
+  ["DualUse generates correct JSON output"] {
+    new {
+      description = "Dual Use caps_lock"
+      manipulators = List(new {
+        type = "basic"
+        from {
+          key_code = "caps_lock"
+          consumer_key_code = null
+          pointing_button = null
+          modifiers = null
+          simultaneous = null
+          simultaneous_options = null
+        }
+        to = List(new {
+          key_code = "left_control"
+          consumer_key_code = null
+          pointing_button = null
+          shell_command = null
+          select_input_source = null
+          set_variable = null
+          mouse_key = null
+          sticky_modifier = null
+          modifiers = null
+          lazy = null
+          repeat = null
+          halt = null
+          hold_down_milliseconds = null
+        })
+        to_if_alone = List(new {
+          key_code = "escape"
+          consumer_key_code = null
+          pointing_button = null
+          shell_command = null
+          select_input_source = null
+          set_variable = null
+          mouse_key = null
+          sticky_modifier = null
+          modifiers = null
+          lazy = null
+          repeat = null
+          halt = null
+          hold_down_milliseconds = null
+        })
+        to_after_key_up = null
+        to_delayed_action = null
+        conditions = null
+        parameters = null
+      })
+    }
+  }
+  ["Complete config with layer"] {
+    new {
+      title = "Karabiner-Pkl Configuration"
+      profiles = List(new {
+        name = "test-profile"
+        selected = true
+        virtual_hid_keyboard = null
+        devices = List()
+        fn_function_keys = List()
+        simple_modifications = List()
+        complex_modifications {
+          parameters = null
+          rules = List(new {
+            description = "Layer with left_command"
+            manipulators = List(new {
+              type = "basic"
+              from {
+                key_code = "j"
+                consumer_key_code = null
+                pointing_button = null
+                modifiers {
+                  mandatory = List("left_command")
+                  optional = null
+                }
+                simultaneous = null
+                simultaneous_options = null
+              }
+              to = List(new {
+                key_code = "left_arrow"
+                consumer_key_code = null
+                pointing_button = null
+                shell_command = null
+                select_input_source = null
+                set_variable = null
+                mouse_key = null
+                sticky_modifier = null
+                modifiers = null
+                lazy = null
+                repeat = null
+                halt = null
+                hold_down_milliseconds = null
+              })
+              to_if_alone = null
+              to_after_key_up = null
+              to_delayed_action = null
+              conditions = null
+              parameters = null
+            }, new {
+              type = "basic"
+              from {
+                key_code = "k"
+                consumer_key_code = null
+                pointing_button = null
+                modifiers {
+                  mandatory = List("left_command")
+                  optional = null
+                }
+                simultaneous = null
+                simultaneous_options = null
+              }
+              to = List(new {
+                key_code = "down_arrow"
+                consumer_key_code = null
+                pointing_button = null
+                shell_command = null
+                select_input_source = null
+                set_variable = null
+                mouse_key = null
+                sticky_modifier = null
+                modifiers = null
+                lazy = null
+                repeat = null
+                halt = null
+                hold_down_milliseconds = null
+              })
+              to_if_alone = null
+              to_after_key_up = null
+              to_delayed_action = null
+              conditions = null
+              parameters = null
+            }, new {
+              type = "basic"
+              from {
+                key_code = "l"
+                consumer_key_code = null
+                pointing_button = null
+                modifiers {
+                  mandatory = List("left_command")
+                  optional = null
+                }
+                simultaneous = null
+                simultaneous_options = null
+              }
+              to = List(new {
+                key_code = "right_arrow"
+                consumer_key_code = null
+                pointing_button = null
+                shell_command = null
+                select_input_source = null
+                set_variable = null
+                mouse_key = null
+                sticky_modifier = null
+                modifiers = null
+                lazy = null
+                repeat = null
+                halt = null
+                hold_down_milliseconds = null
+              })
+              to_if_alone = null
+              to_after_key_up = null
+              to_delayed_action = null
+              conditions = null
+              parameters = null
+            }, new {
+              type = "basic"
+              from {
+                key_code = "semicolon"
+                consumer_key_code = null
+                pointing_button = null
+                modifiers {
+                  mandatory = List("left_command")
+                  optional = null
+                }
+                simultaneous = null
+                simultaneous_options = null
+              }
+              to = List(new {
+                key_code = "up_arrow"
+                consumer_key_code = null
+                pointing_button = null
+                shell_command = null
+                select_input_source = null
+                set_variable = null
+                mouse_key = null
+                sticky_modifier = null
+                modifiers = null
+                lazy = null
+                repeat = null
+                halt = null
+                hold_down_milliseconds = null
+              })
+              to_if_alone = null
+              to_after_key_up = null
+              to_delayed_action = null
+              conditions = null
+              parameters = null
+            })
+          })
+        }
+        parameters = null
+      })
+      global = null
+    }
+  }
+}

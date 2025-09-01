@@ -1,0 +1,97 @@
+amends "pkl:test"
+
+import "../pkl-lib/yabai.pkl" as y
+import "../pkl-lib/karabiner.pkl" as k
+import "../pkl-lib/keys.pkl"
+
+local emptyYabai = new y.Yabai {}
+
+local windowFocusYabai = new y.Yabai {
+  window {
+    focus {
+      modifier = keys.left_command
+      west = keys.h
+      east = keys.l
+      north = keys.k
+      south = keys.j
+    }
+  }
+}
+
+local spaceFocusYabai = new y.Yabai {
+  space {
+    focus {
+      modifier = keys.left_command
+      mappings = new Mapping {
+        ["1"] = keys.one
+        ["2"] = keys.two
+      }
+    }
+  }
+}
+
+local togglesYabai = new y.Yabai {
+  toggles {
+    modifier = List(keys.left_command, keys.left_option)
+    float = keys.f
+    fullscreen = keys.m
+  }
+}
+
+facts {
+  ["Yabai module should create default empty config"] {
+    // Should be a Yabai instance
+    emptyYabai is y.Yabai
+  }
+  
+  ["Yabai window focus should accept modifier and directions"] {
+    windowFocusYabai.window.focus.modifier == keys.left_command
+    windowFocusYabai.window.focus.west == keys.h
+    windowFocusYabai.window.focus.east == keys.l
+  }
+  
+  ["Yabai space focus should accept modifier and mappings"] {
+    spaceFocusYabai.space.focus.modifier == keys.left_command
+    spaceFocusYabai.space.focus.mappings.toMap()["1"] == keys.one
+  }
+  
+  ["Yabai toggles should accept modifier and toggle keys"] {
+    togglesYabai.toggles.float == keys.f
+    togglesYabai.toggles.fullscreen == keys.m
+  }
+  
+  ["Yabai build should return List of Rules"] {
+    local rules = windowFocusYabai.build
+    rules is List
+  }
+}
+
+examples {
+  ["Yabai window focus configuration"] {
+    new y.Yabai {
+      window {
+        focus {
+          modifier = keys.left_command
+          west = keys.h
+          south = keys.j
+          north = keys.k
+          east = keys.l
+        }
+      }
+    }.build
+  }
+  
+  ["Complete config with Yabai integration"] {
+    k.config("yabai-test", new y.Yabai {
+      window {
+        focus {
+          modifier = keys.left_command
+          west = keys.h
+          south = keys.j
+          north = keys.k
+          east = keys.l
+        }
+      }
+    }.build)
+  }
+}

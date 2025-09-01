@@ -108,16 +108,8 @@ impl Compiler {
         }
 
         let json_str = String::from_utf8_lossy(&output.stdout);
-        let pkl_output: Value = serde_json::from_str(&json_str)
+        let config: Value = serde_json::from_str(&json_str)
             .map_err(|e| KarabinerPklError::JsonParseError { source: e })?;
-
-        // Extract the 'config' field from the pkl output
-        let config = pkl_output
-            .get("config")
-            .ok_or_else(|| KarabinerPklError::ValidationError {
-                message: "Pkl output must contain a 'config' field".to_string(),
-            })?
-            .clone();
 
         self.validate_config(&config)?;
 
