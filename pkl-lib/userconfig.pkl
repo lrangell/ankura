@@ -1,0 +1,33 @@
+import "karabiner.pkl"
+import "yabai.pkl"
+
+// User-facing configuration properties
+name: String = "Default Profile"
+rules: List<Any> = List()  // Accepts Rules or constructor objects with .build property
+settings: karabiner.ComplexModificationParameters?
+yabaiConfig: yabai.Yabai = new yabai.Yabai {}
+simpleModifications: List<karabiner.SimpleModification> = List()
+devices: List<karabiner.Device> = List()
+
+// Helper function to process rules - automatically call .build() if available
+local function processRules(ruleList: List<Any>): List<karabiner.Rule> =
+  ruleList.map((rule) ->
+    if (rule.hasProperty("build"))
+      rule.build()
+    else
+      rule as karabiner.Rule
+  ).toList()
+
+// Export as 'config' for compatibility with existing compiler
+config: karabiner.Config = new karabiner.Config {
+  profiles = List(new karabiner.Profile {
+    name = this.name
+    selected = true
+    complex_modifications = new karabiner.ComplexModifications {
+      parameters = settings
+      rules = processRules(rules) + yabaiConfig.build
+    }
+    simple_modifications = simpleModifications
+    devices = devices
+  })
+}

@@ -1,5 +1,11 @@
 module karabiner
 
+// Import keys for validation
+import "keys.pkl"
+
+// Self-import for accessing functions from class properties  
+import "karabiner.pkl" as self
+
 class Config {
   title: String = "Karabiner-Pkl Configuration"
   profiles: List<Profile> = List(
@@ -193,28 +199,281 @@ typealias PointingButton = String
 
 typealias KeyPress = ToEvent
 
-class SimpleConfig {
-  profileName: String = "pkl"
-  simple_modifications: List<SimpleModification> = List()
-  complex_modifications: ComplexModifications?
-  parameters: Parameters?
-  devices: List<Device> = List()
-  
-  function toConfig(): Config = 
-    let (mods = simple_modifications)
-    let (complexMods = complex_modifications)
-    let (params = parameters)
-    let (devs = devices)
-    new Config {
-      profiles = List(
-        new Profile {
-          name = profileName
-          selected = true
-          simple_modifications = mods
-          complex_modifications = complexMods
-          parameters = params
-          devices = devs
-        }
-      )
-    }
+
+// Type aliases for flexible parameters
+typealias KeyInput = String|ToEvent
+typealias KeyListInput = KeyInput|List<KeyInput>
+typealias ModifierInput = String|List<String>
+
+// Helper function to create FromEvent with optional modifiers
+function fromKey(key: String): FromEvent = new FromEvent {
+  key_code = keys.validateKeyCode(key)
 }
+
+// Helper function to create FromEvent with modifiers
+function fromKeyWithMods(key: String, modifiers: ModifierInput): FromEvent = new FromEvent {
+  key_code = keys.validateKeyCode(key)
+  modifiers = if (modifiers is String) new Modifiers { mandatory = List(modifiers) }
+              else new Modifiers { mandatory = modifiers }
+}
+
+// Helper function to create ToEvent or List<ToEvent> from flexible input
+function toKey(key: KeyListInput): List<ToEvent> = 
+  if (key is String) List(new ToEvent { key_code = keys.validateKeyCode(key) })
+  else if (key is ToEvent) List(key)
+  else if (key is List) key.map((k) -> if (k is String) new ToEvent { key_code = keys.validateKeyCode(k) } else k).toList()
+  else throw("Invalid key input type")
+
+// Factory function for Mapping - supports object literal syntax
+function mapping(entries: Mapping<String, KeyListInput>): Mapping<String, KeyListInput> = entries
+
+// Basic manipulator factory - follows <from>, <to> order
+function map(
+  fromKey: String,
+  toKey: KeyListInput
+): Manipulator = new Manipulator {
+  type = "basic"
+  from = new FromEvent { key_code = keys.validateKeyCode(fromKey) }
+  to = toKey(toKey)
+}
+
+// Basic manipulator - follows <from>, <to> order
+function manipulator(
+  fromKey: String, 
+  toKey: KeyListInput
+): Manipulator = new Manipulator {
+  type = "basic"
+  from = new FromEvent { key_code = keys.validateKeyCode(fromKey) }
+  to = toKey(toKey)
+}
+
+// Manipulator with alone action - follows <from>, <to>, <alone> order
+function manipulatorWithAlone(
+  fromKey: String, 
+  toKey: KeyListInput,
+  aloneKey: KeyListInput
+): Manipulator = new Manipulator {
+  type = "basic"
+  from = new FromEvent { key_code = keys.validateKeyCode(fromKey) }
+  to = toKey(toKey)
+  to_if_alone = toKey(aloneKey)
+}
+
+// Manipulator with modifiers - follows <modifier>, <from>, <to> order
+function withMods(
+  mods: ModifierInput,
+  fromKey: String,
+  toKey: KeyListInput
+): Manipulator = new Manipulator {
+  type = "basic"
+  from = new FromEvent { 
+    key_code = keys.validateKeyCode(fromKey)
+    modifiers = new Modifiers { 
+      mandatory = if (mods is String) List(mods) else mods
+    }
+  }
+  to = toKey(toKey)
+}
+
+// Dual use factory - follows <key>, <hold>, <tap> order
+function dualUse(
+  keyCode: String,
+  holdAction: KeyListInput,
+  tapAction: KeyListInput
+): Manipulator = new Manipulator {
+  type = "basic"
+  from = new FromEvent { key_code = keys.validateKeyCode(keyCode) }
+  to = toKey(holdAction)
+  to_if_alone = toKey(tapAction)
+}
+
+// Simultaneous keys factory - accepts "jk" string or List("j", "k")
+function simul(
+  keyCodes: String|List<String>,
+  toAction: KeyListInput
+): Manipulator = 
+  let (keyList = if (keyCodes is String) keyCodes.split("").toList() else keyCodes)
+  new Manipulator {
+    type = "basic"
+    from = new FromEvent {
+      simultaneous = keyList.map((k) -> new FromEvent { key_code = keys.validateKeyCode(k) }).toList()
+    }
+    to = toKey(toAction)
+  }
+
+// Simultaneous keys factory with options
+function simulWithOptions(
+  keyCodes: String|List<String>,
+  toAction: KeyListInput,
+  opts: SimultaneousOptions
+): Manipulator = 
+  let (keyList = if (keyCodes is String) keyCodes.split("").toList() else keyCodes)
+  new Manipulator {
+    type = "basic"
+    from = new FromEvent {
+      simultaneous = keyList.map((k) -> new FromEvent { key_code = keys.validateKeyCode(k) }).toList()
+      simultaneous_options = opts
+    }
+    to = toKey(toAction)
+  }
+
+// Layer factory - follows <modifier>, <mappings> order
+function layer(
+  modifier: ModifierInput,
+  mappings: Mapping<String, KeyListInput>
+): Rule = new Rule {
+  description = "Layer with \(modifier)"
+  manipulators = mappings.toMap().entries.map((entry) -> 
+    withMods(modifier, entry.key, entry.value)
+  ).toList()
+}
+
+// Simlayer factory - follows <trigger>, <mappings> order
+function simlayer(
+  trigger: String,
+  mappings: Mapping<String, KeyListInput>
+): Rule = new Rule {
+  description = "Simultaneous \(trigger) layer"
+  manipulators = mappings.toMap().entries.map((entry) -> 
+    simul(trigger + entry.key, entry.value)
+  ).toList()
+}
+
+// Simlayer factory with options
+function simlayerWithOptions(
+  trigger: String,
+  mappings: Mapping<String, KeyListInput>,
+  options: SimultaneousOptions
+): Rule = new Rule {
+  description = "Simultaneous \(trigger) layer"
+  manipulators = mappings.toMap().entries.map((entry) -> 
+    simulWithOptions(trigger + entry.key, entry.value, options)
+  ).toList()
+}
+
+// Rule factory with single manipulator
+function rule(
+  desc: String,
+  manipulator: Manipulator
+): Rule = new Rule {
+  description = desc
+  manipulators = List(manipulator)
+}
+
+// Config factory with multiple rules
+function config(
+  profileName: String,
+  ruleList: List<Rule>
+): Config = new Config {
+  profiles = List(new Profile {
+    name = profileName
+    selected = true
+    complex_modifications = new ComplexModifications {
+      rules = ruleList
+    }
+  })
+}
+
+// Constructor-style APIs
+
+// Base class for Layer and SimLayer with common properties and logic
+abstract class BaseLayer {
+  mappings: Mapping<String, KeyListInput> = new Mapping {}
+  
+  // Homerow keys
+  a: KeyListInput?
+  s: KeyListInput?
+  d: KeyListInput?
+  f: KeyListInput?
+  g: KeyListInput?
+  h: KeyListInput?
+  j: KeyListInput?
+  k: KeyListInput?
+  l: KeyListInput?
+  semicolon: KeyListInput?
+  
+  // Top row keys
+  q: KeyListInput?
+  w: KeyListInput?
+  e: KeyListInput?
+  r: KeyListInput?
+  t: KeyListInput?
+  y: KeyListInput?
+  u: KeyListInput?
+  i: KeyListInput?
+  o: KeyListInput?
+  p: KeyListInput?
+  
+  // Bottom row keys
+  z: KeyListInput?
+  x: KeyListInput?
+  c: KeyListInput?
+  v: KeyListInput?
+  b: KeyListInput?
+  n: KeyListInput?
+  m: KeyListInput?
+  comma: KeyListInput?
+  period: KeyListInput?
+  
+  // Number keys
+  `1`: KeyListInput?
+  `2`: KeyListInput?
+  `3`: KeyListInput?
+  `4`: KeyListInput?
+  `5`: KeyListInput?
+  `6`: KeyListInput?
+  `7`: KeyListInput?
+  `8`: KeyListInput?
+  `9`: KeyListInput?
+  `0`: KeyListInput?
+  
+  abstract function build(): Rule
+  
+  function getAllMappings(): Mapping<String, KeyListInput> = 
+    let (baseMap = mappings.toMap())
+    let (keyMap = this.toMap().filter((key, value) -> 
+      key != "mappings" && key != "trigger" && key != "modifier" && 
+      value != null && value is KeyListInput
+    ).map((key, value) -> Pair(
+      if (key == "semicolon") keys.semicolon
+      else if (key == "comma") keys.comma  
+      else if (key == "period") keys.period
+      else if (key == "1") keys.one
+      else if (key == "2") keys.two  
+      else if (key == "3") keys.three
+      else if (key == "4") keys.four
+      else if (key == "5") keys.five
+      else if (key == "6") keys.six
+      else if (key == "7") keys.seven
+      else if (key == "8") keys.eight
+      else if (key == "9") keys.nine
+      else if (key == "0") keys.zero
+      else key, 
+      value as KeyListInput
+    )).toMap())
+    baseMap.fold(keyMap, (acc, key, value) -> acc.put(key, value)).toMapping()
+}
+
+// SimLayer constructor class  
+class SimLayer extends BaseLayer {
+  trigger: String
+  
+  function build(): Rule = self.simlayer(trigger, getAllMappings())
+}
+
+// DualUse constructor class
+class DualUse {
+  key: String
+  tap: KeyListInput
+  hold: KeyListInput
+  
+  function build(): Rule = self.rule("Dual Use \(key)", self.dualUse(key, hold, tap))
+}
+
+// Layer constructor class
+class Layer extends BaseLayer {
+  modifier: ModifierInput
+  
+  function build(): Rule = self.layer(modifier, getAllMappings())
+}
+
