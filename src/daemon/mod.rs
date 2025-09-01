@@ -41,7 +41,7 @@ impl Daemon {
             *is_running = true;
         }
 
-        info!("Starting karabiner-pkl daemon");
+        info!("Starting ankura daemon");
         info!("Watching: {}", self.config_path.display());
 
         self.compile_and_notify(None).await;
@@ -61,7 +61,6 @@ impl Daemon {
         let config_path = self.config_path.clone();
         let is_running = self.is_running.clone();
 
-        // Spawn a task to handle file system events
         tokio::spawn(async move {
             loop {
                 match rx.recv() {
@@ -75,7 +74,7 @@ impl Daemon {
                                     &compiler,
                                     &notification_manager,
                                     &config_path,
-                                    None, // No profile override for daemon watch mode
+                                    None,
                                 )
                                 .await;
                             }
@@ -100,7 +99,7 @@ impl Daemon {
     }
 
     pub async fn stop(&self) -> Result<()> {
-        info!("Stopping karabiner-pkl daemon");
+        info!("Stopping ankura daemon");
         let mut is_running = self.is_running.write().await;
         *is_running = false;
         Ok(())
@@ -134,11 +133,9 @@ impl Daemon {
     ) {
         match compiler.compile(config_path, profile_name).await {
             Ok(config) => {
-                // Write to default location
                 let home = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
                 let output_path = home.join(".config/karabiner/karabiner.json");
 
-                // Merge with existing if present
                 let final_config = if output_path.exists() {
                     match merge_configurations(&output_path, config) {
                         Ok(merged) => merged,
@@ -152,7 +149,6 @@ impl Daemon {
                     config
                 };
 
-                // Write the configuration
                 match write_karabiner_config(&output_path, &final_config) {
                     Ok(_) => {
                         info!("Successfully compiled configuration");
@@ -172,8 +168,6 @@ impl Daemon {
         }
     }
 }
-
-// Notification Manager implementation
 
 struct NotificationManager {
     app_name: String,

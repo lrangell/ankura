@@ -1,8 +1,8 @@
 amends "pkl:test"
 
-import "../pkl-lib/yabai.pkl" as y
-import "../pkl-lib/karabiner.pkl" as k
-import "../pkl-lib/keys.pkl"
+import "../pkl/yabai.pkl" as y
+import "../pkl/karabiner.pkl" as k
+import "../pkl/keys.pkl"
 
 local emptyYabai = new y.Yabai {}
 

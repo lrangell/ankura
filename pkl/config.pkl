@@ -1,16 +1,27 @@
-import "karabiner.pkl"
-import "yabai.pkl"
+import "karabiner.pkl" as k
+import "keys.pkl" as keyDefs
+import "helpers.pkl" as h
+import "yabai.pkl" as y
 
-// User-facing configuration properties
+karabiner = k
+keys = keyDefs
+helpers = h  
+yabai = y
+
+typealias DualUse = k.DualUse
+typealias SimLayer = k.SimLayer
+typealias Layer = k.Layer
+typealias Rule = k.Rule
+typealias Yabai = y.Yabai
+
 name: String = "Default Profile"
 rules: List<Any> = List()  // Accepts Rules or constructor objects with .build property
-settings: karabiner.ComplexModificationParameters?
-yabaiConfig: yabai.Yabai = new yabai.Yabai {}
-simpleModifications: List<karabiner.SimpleModification> = List()
-devices: List<karabiner.Device> = List()
+settings: k.ComplexModificationParameters?
+yabaiConfig: y.Yabai = new y.Yabai {}
+simpleModifications: List<k.SimpleModification> = List()
+devices: List<k.Device> = List()
 
-// Helper function to process rules - automatically call .build() on constructor classes
-local function processRules(ruleList: List<Any>): List<karabiner.Rule> =
+local function processRules(ruleList: List<Any>): List<k.Rule> =
   ruleList.map((rule) ->
     let (className = rule.getClass().toString())
     if (className == "karabiner#DualUse" || className == "karabiner#SimLayer" || className == "karabiner#Layer")
@@ -18,26 +29,25 @@ local function processRules(ruleList: List<Any>): List<karabiner.Rule> =
     else if (rule.hasProperty("build"))
       rule.build
     else
-      rule as karabiner.Rule
+      rule as k.Rule
   ).toList()
 
-// Generate the karabiner configuration fields directly as module output
 title: String = "Karabiner-Pkl Configuration"
-profiles: List<karabiner.Profile> = 
+profiles: List<k.Profile> = 
   let (profileName = name)
   let (profileSettings = settings)  
   let (profileRules = rules)
   let (profileYabaiConfig = yabaiConfig)
   let (profileSimpleModifications = simpleModifications)
   let (profileDevices = devices)
-  List(new karabiner.Profile {
+  List(new k.Profile {
     name = profileName
     selected = true
-    complex_modifications = new karabiner.ComplexModifications {
+    complex_modifications = new k.ComplexModifications {
       parameters = profileSettings
       rules = processRules(profileRules) + profileYabaiConfig.build
     }
     simple_modifications = profileSimpleModifications
     devices = profileDevices
   })
-global: karabiner.Global?
+global: k.Global?

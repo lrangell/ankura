@@ -6,13 +6,13 @@ use thiserror::Error;
 pub enum KarabinerPklError {
     #[error("Pkl CLI not found in PATH")]
     #[diagnostic(
-        code(karabiner_pkl::pkl_not_found),
+        code(ankura::pkl_not_found),
         help("Install Pkl CLI from https://pkl-lang.org or via Homebrew: brew install pkl")
     )]
     PklNotFound,
 
     #[error("Failed to read configuration file")]
-    #[diagnostic(code(karabiner_pkl::read_error))]
+    #[diagnostic(code(ankura::read_error))]
     ConfigReadError {
         path: PathBuf,
         #[source]
@@ -20,7 +20,7 @@ pub enum KarabinerPklError {
     },
 
     #[error("Pkl compilation failed")]
-    #[diagnostic(code(karabiner_pkl::pkl_compile_error))]
+    #[diagnostic(code(ankura::pkl_compile_error))]
     PklCompileError {
         #[help]
         help: String,
@@ -32,8 +32,8 @@ pub enum KarabinerPklError {
 
     #[error("Invalid JSON output from Pkl")]
     #[diagnostic(
-        code(karabiner_pkl::json_parse_error),
-        help("This is likely a bug in the Pkl configuration or karabiner-pkl")
+        code(ankura::json_parse_error),
+        help("This is likely a bug in the Pkl configuration or ankura")
     )]
     JsonParseError {
         #[source]
@@ -41,7 +41,7 @@ pub enum KarabinerPklError {
     },
 
     #[error("Failed to write Karabiner configuration")]
-    #[diagnostic(code(karabiner_pkl::write_error))]
+    #[diagnostic(code(ankura::write_error))]
     KarabinerWriteError {
         path: PathBuf,
         #[source]
@@ -49,25 +49,25 @@ pub enum KarabinerPklError {
     },
 
     #[error("Configuration validation failed")]
-    #[diagnostic(code(karabiner_pkl::validation_error))]
+    #[diagnostic(code(ankura::validation_error))]
     ValidationError {
         #[help]
         message: String,
     },
 
     #[error("File watching error")]
-    #[diagnostic(code(karabiner_pkl::watch_error))]
+    #[diagnostic(code(ankura::watch_error))]
     WatchError {
         #[source]
         source: notify::Error,
     },
 
     #[error("Daemon error")]
-    #[diagnostic(code(karabiner_pkl::daemon_error))]
+    #[diagnostic(code(ankura::daemon_error))]
     DaemonError { message: String },
 
     #[error("Failed to write configuration file")]
-    #[diagnostic(code(karabiner_pkl::config_write_error))]
+    #[diagnostic(code(ankura::config_write_error))]
     ConfigWriteError {
         path: PathBuf,
         #[source]

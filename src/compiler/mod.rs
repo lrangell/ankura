@@ -9,7 +9,7 @@ use tracing::info;
 use which::which;
 
 #[derive(RustEmbed)]
-#[folder = "pkl-lib/"]
+#[folder = "pkl/"]
 #[include = "*.pkl"]
 struct PklLib;
 
@@ -22,7 +22,6 @@ impl Compiler {
     pub fn new() -> Result<Self> {
         let pkl_path = which("pkl").map_err(|_| KarabinerPklError::PklNotFound)?;
 
-        // Materialize embedded pkl-lib files to persistent location
         let embedded_lib_path = Self::materialize_pkl_lib()?;
 
         Ok(Self {
@@ -31,8 +30,6 @@ impl Compiler {
         })
     }
 
-    /// Compile a Pkl configuration file and return the resulting JSON
-    /// Returns the compiled configuration with optional profile name override
     pub async fn compile(&self, config_path: &Path, profile_name: Option<&str>) -> Result<Value> {
         info!("Compiling {}", config_path.display());
 
@@ -46,7 +43,6 @@ impl Compiler {
             });
         }
 
-        // Set up module paths for imports
         let home = dirs::home_dir().ok_or_else(|| KarabinerPklError::DaemonError {
             message: "Could not find home directory".to_string(),
         })?;
@@ -55,18 +51,14 @@ impl Compiler {
         let mut pkl_command = Command::new(&self.pkl_path);
         pkl_command.args(["eval", "--format=json"]);
 
-        // Add module paths
         let mut module_paths = vec![];
 
-        // Always add the embedded library path first
         module_paths.push(self.embedded_lib_path.to_string_lossy().to_string());
 
-        // Add user library directory if it exists
         if lib_dir.exists() {
             module_paths.push(lib_dir.to_string_lossy().to_string());
         }
 
-        // Add the module path argument for modulepath: imports
         pkl_command.arg("--module-path");
         pkl_command.arg(module_paths.join(":"));
         let output =
@@ -88,7 +80,6 @@ impl Compiler {
 
             let span = Self::parse_pkl_error_location(&stderr, &source);
 
-            // Extract just the error message without the full traceback
             let error_msg = if let Some(start) = stderr.find("–– Pkl Error ––") {
                 let msg_start = start + "–– Pkl Error ––".len();
                 if let Some(end) = stderr[msg_start..].find("\n\n") {
@@ -113,7 +104,6 @@ impl Compiler {
 
         self.validate_config(&config)?;
 
-        // Apply profile name override if provided
         let mut final_config = config;
         if let Some(name) = profile_name {
             if let Some(profiles) = final_config
@@ -156,23 +146,17 @@ impl Compiler {
             });
         }
 
-        // No need to check for specific profile name anymore
-        // Just ensure we have at least one profile which we already checked above
-
         Ok(())
     }
 
     fn parse_pkl_error_location(error_str: &str, source_code: &str) -> Option<miette::SourceSpan> {
-        // Look for the error location in the format "line X)"
         if let Some(line_match) = error_str.rfind("line ") {
             let rest = &error_str[line_match + 5..];
             if let Some(paren) = rest.find(')') {
                 if let Ok(line_num) = rest[..paren].trim().parse::<usize>() {
-                    // Find the column by looking for the caret (^) in the error output
                     let mut col = 1;
                     let lines: Vec<&str> = error_str.lines().collect();
 
-                    // Look for the line with the caret
                     for line in lines.iter() {
                         if line.contains('^') {
                             col = line.find('^').unwrap_or(0) + 1;
@@ -180,14 +164,13 @@ impl Compiler {
                         }
                     }
 
-                    // Calculate the byte offset in the source
                     let mut offset = 0;
                     for (idx, line) in source_code.lines().enumerate() {
                         if idx + 1 == line_num {
                             offset += col.saturating_sub(1);
                             break;
                         }
-                        offset += line.len() + 1; // +1 for newline
+                        offset += line.len() + 1;
                     }
 
                     return Some(miette::SourceSpan::new(offset.into(), 1));
@@ -197,25 +180,16 @@ impl Compiler {
         None
     }
 
-    /// Materialize embedded pkl-lib files to ~/.local/share/karabiner-pkl/
-    /// Only extracts if files are missing or outdated
     fn materialize_pkl_lib() -> Result<PathBuf> {
-        let data_dir = dirs::data_local_dir()
-            .ok_or_else(|| KarabinerPklError::DaemonError {
-                message: "Could not find local data directory".to_string(),
-            })?
-            .join("karabiner-pkl");
+        let data_dir = PathBuf::from("/opt/homebrew/share/ankura");
 
-        // Create directory if it doesn't exist
         std::fs::create_dir_all(&data_dir).map_err(|e| KarabinerPklError::DaemonError {
             message: format!("Failed to create data directory: {e}"),
         })?;
 
-        // Calculate hash of embedded files to detect changes
         let embedded_hash = Self::calculate_embedded_hash();
-        let hash_file = data_dir.join(".pkl-lib-hash");
+        let hash_file = data_dir.join(".pkl-hash");
 
-        // Check if we need to extract
         let should_extract = if let Ok(stored_hash) = std::fs::read_to_string(&hash_file) {
             stored_hash.trim() != embedded_hash.to_string()
         } else {
@@ -223,12 +197,8 @@ impl Compiler {
         };
 
         if should_extract {
-            info!(
-                "Extracting embedded pkl-lib files to {}",
-                data_dir.display()
-            );
+            info!("Extracting embedded pkl files to {}", data_dir.display());
 
-            // Extract all embedded pkl files
             for file in PklLib::iter() {
                 let file_path = data_dir.join(file.as_ref());
 
@@ -245,7 +215,6 @@ impl Compiler {
                 }
             }
 
-            // Write hash file
             std::fs::write(&hash_file, embedded_hash.to_string()).map_err(|e| {
                 KarabinerPklError::DaemonError {
                     message: format!("Failed to write hash file: {e}"),
@@ -256,11 +225,9 @@ impl Compiler {
         Ok(data_dir)
     }
 
-    /// Calculate a hash of all embedded files to detect changes
     fn calculate_embedded_hash() -> u64 {
         let mut hasher = DefaultHasher::new();
 
-        // Hash all embedded files in a deterministic order
         let mut files: Vec<_> = PklLib::iter().collect();
         files.sort();
 

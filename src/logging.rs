@@ -3,13 +3,11 @@ use std::path::PathBuf;
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
 pub fn init_logging() -> std::result::Result<PathBuf, Box<dyn std::error::Error + Send + Sync>> {
-    let log_dir = dirs::data_local_dir()
-        .unwrap_or_else(|| PathBuf::from("~/.local/share"))
-        .join("karabiner-pkl/logs");
+    let log_dir = PathBuf::from("/opt/homebrew/var/log/ankura");
 
     fs::create_dir_all(&log_dir)?;
 
-    let log_file = log_dir.join("karabiner-pkl.log");
+    let log_file = log_dir.join("ankura.log");
     let file_appender = tracing_subscriber::fmt::layer()
         .with_writer(std::sync::Mutex::new(
             fs::OpenOptions::new()
@@ -30,7 +28,7 @@ pub fn init_logging() -> std::result::Result<PathBuf, Box<dyn std::error::Error 
     tracing_subscriber::registry()
         .with(
             EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| EnvFilter::new("karabiner_pkl=info,warn")),
+                .unwrap_or_else(|_| EnvFilter::new("ankura=info,warn")),
         )
         .with(console_layer)
         .with(file_appender)

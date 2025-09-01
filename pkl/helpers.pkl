@@ -52,9 +52,7 @@ function launchAppMods(key: String, app: String, modifiers: List<String>): karab
 
 
 
-// Common pattern shortcuts using new factory functions
 
-// Simple caps lock remappings
 function capsToEsc(): karabiner.Rule = 
   karabiner.rule("Caps Lock to Escape", karabiner.map(keys.caps_lock, keys.escape))
 
@@ -67,7 +65,6 @@ function capsToCtrlEsc(): karabiner.Rule =
     karabiner.dualUse(keys.caps_lock, keys.left_control, keys.escape)
   )
 
-// Spacebar shortcuts
 function spaceToCmd(): karabiner.Rule = 
   karabiner.rule(
     "Spacebar to Command when held, Space when alone",
@@ -86,7 +83,6 @@ function spaceToCtrl(): karabiner.Rule =
     karabiner.dualUse(keys.spacebar, keys.left_control, keys.spacebar)
   )
 
-// Command key dual-use
 function cmdToRecent(): karabiner.Rule = 
   karabiner.rule(
     "Command to recent space when alone",
@@ -96,7 +92,6 @@ function cmdToRecent(): karabiner.Rule =
     })
   )
 
-// Shell command helper
 function shell(cmd: String): karabiner.ToEvent = new karabiner.ToEvent {
   shell_command = cmd
 }

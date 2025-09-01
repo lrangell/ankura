@@ -1,7 +1,7 @@
+use ankura::cli::{self, Cli, Commands};
+use ankura::error::Result;
+use ankura::logging;
 use clap::Parser;
-use karabiner_pkl::cli::{self, Cli, Commands};
-use karabiner_pkl::error::Result;
-use karabiner_pkl::logging;
 use std::path::PathBuf;
 
 #[tokio::main]
@@ -10,7 +10,6 @@ async fn main() -> Result<()> {
 
     let cli = Cli::parse();
 
-    // Expand tilde in config path
     let config_path = expand_tilde(&cli.config);
 
     match cli.command {
@@ -41,10 +40,11 @@ fn expand_tilde(path: &str) -> PathBuf {
 }
 
 fn get_log_file() -> Result<PathBuf> {
-    let data_dir = dirs::data_local_dir().ok_or_else(|| {
-        karabiner_pkl::error::KarabinerPklError::DaemonError {
-            message: "Could not find local data directory".to_string(),
+    let log_dir = PathBuf::from("/opt/homebrew/var/log/ankura");
+    std::fs::create_dir_all(&log_dir).map_err(|e| {
+        ankura::error::KarabinerPklError::DaemonError {
+            message: format!("Failed to create log directory: {e}"),
         }
     })?;
-    Ok(data_dir.join("karabiner-pkl").join("daemon.log"))
+    Ok(log_dir.join("daemon.log"))
 }

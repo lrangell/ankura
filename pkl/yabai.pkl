@@ -2,16 +2,13 @@ module yabai
 
 import "karabiner.pkl"
 
-// Helper types for modifier handling
 typealias ModifierInput = String|List<String>
 
-// Convert modifier input to list format
 const function toModifierList(input: ModifierInput?): List<String>? =
   if (input == null) null
   else if (input is String) List(input)
   else input
 
-// Window action classes
 class WindowFocus {
   modifier: ModifierInput?
   west: String?
@@ -88,7 +85,6 @@ class WindowInsert {
   cancel: String?
 }
 
-// Space action classes
 class SpaceFocus {
   modifier: ModifierInput?
   mappings: Mapping<String, String>?
@@ -120,7 +116,6 @@ class SpaceLayout {
   mirrorY: String?
 }
 
-// Display action classes
 class DisplayFocus {
   modifier: ModifierInput?
   mappings: Mapping<String, String>?
@@ -141,7 +136,6 @@ class DisplayMove {
   last: String?
 }
 
-// Stack action classes
 class StackFocus {
   modifier: ModifierInput?
   next: String?
@@ -158,7 +152,6 @@ class StackSwap {
   last: String?
 }
 
-// Entity container classes
 class Window {
   modifier: ModifierInput?
   focus: WindowFocus?
@@ -205,7 +198,6 @@ class Stack {
   swap: StackSwap?
 }
 
-// Main Yabai configuration class
 class Yabai {
   cmdPath: String = "/opt/homebrew/bin/yabai"
   
@@ -215,12 +207,10 @@ class Yabai {
   toggles: Toggles?
   stack: Stack?
   
-  // Helper function to create shell command
   local function shellCommand(args: String): karabiner.ToEvent = new {
     shell_command = "\(cmdPath) \(args)"
   }
   
-  // Helper function to create manipulator
   local function manipulator(key: String, modList: List<String>?, command: String): karabiner.Manipulator = 
     new karabiner.Manipulator {
       type = "basic"
@@ -233,11 +223,9 @@ class Yabai {
       to = List(shellCommand(command))
     }
   
-  // Helper to get effective modifier (child overrides parent)
   local function getEffectiveModifier(parentMod: ModifierInput?, childMod: ModifierInput?): List<String>? =
     toModifierList(childMod ?? parentMod)
   
-  // Helper to create manipulators from directional mapping
   local function directionalManipulators(
     mapping: Mapping<String, String?>,
     modifiers: List<String>?,
@@ -252,7 +240,6 @@ class Yabai {
       )
       .filter((m) -> m != null)
   
-  // Helper to create manipulators from space/display mappings
   local function indexedManipulators(
     mappings: Mapping<String, String>?,
     modifiers: List<String>?,
@@ -267,7 +254,6 @@ class Yabai {
       )
       .filter((m) -> m != null)
   
-  // Helper to create simlayer manipulators
   local function simlayerManipulators(
     trigger: String,
     mappings: Mapping<String, String>?,
@@ -291,7 +277,6 @@ class Yabai {
       )
       .filter((m) -> m != null)
   
-  // Helper to create sequential navigation manipulators
   local function sequentialManipulators(
     actions: Mapping<String, String?>,
     modifiers: List<String>?,
@@ -306,7 +291,6 @@ class Yabai {
       )
       .filter((m) -> m != null)
   
-  // Generate window rules
   local function generateWindowRules(): List<karabiner.Rule> =
     if (window == null) List()
     else List(
@@ -463,7 +447,6 @@ class Yabai {
         manipulators = directional + special
       }
   
-  // Generate space rules
   local function generateSpaceRules(): List<karabiner.Rule> =
     if (space == null) List()
     else List(
@@ -478,7 +461,6 @@ class Yabai {
       let (focus = space.focus)
       let (mods = getEffectiveModifier(space.modifier, focus.modifier))
       
-      // Check if using simlayer (single non-modifier key)
       let (isSimlayer = mods?.length == 1 && !mods[0].contains("command") && !mods[0].contains("control") && !mods[0].contains("option") && !mods[0].contains("shift"))
       let (indexed = if (isSimlayer && mods != null)
         simlayerManipulators(mods[0], focus.mappings, "-m space --focus")
@@ -503,7 +485,6 @@ class Yabai {
       let (move = space.move)
       let (mods = getEffectiveModifier(space.modifier, move.modifier))
       
-      // Check if using simlayer (single non-modifier key)
       let (isSimlayer = mods?.length == 1 && !mods[0].contains("command") && !mods[0].contains("control") && !mods[0].contains("option") && !mods[0].contains("shift"))
       let (indexed = if (isSimlayer && mods != null)
         simlayerManipulators(mods[0], move.mappings, "-m window --space")
@@ -542,7 +523,6 @@ class Yabai {
         manipulators = commands
       }
   
-  // Generate display rules
   local function generateDisplayRules(): List<karabiner.Rule> =
     if (display == null) List()
     else List(
@@ -590,7 +570,6 @@ class Yabai {
         manipulators = indexed + sequential
       }
   
-  // Generate toggle rules
   local function generateToggleRules(): List<karabiner.Rule> =
     if (toggles == null) List()
     else
@@ -618,7 +597,6 @@ class Yabai {
         manipulators = windowToggles + special
       })
   
-  // Generate stack rules
   local function generateStackRules(): List<karabiner.Rule> =
     if (stack == null) List()
     else List(
@@ -662,7 +640,6 @@ class Yabai {
         manipulators = commands
       }
   
-  // Main rule generation function
   build: List<karabiner.Rule> = 
     generateWindowRules() + 
     generateSpaceRules() + 

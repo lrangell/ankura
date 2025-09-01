@@ -1,8 +1,8 @@
 amends "pkl:test"
 
-import "../pkl-lib/helpers.pkl" as h
-import "../pkl-lib/karabiner.pkl" as k
-import "../pkl-lib/keys.pkl"
+import "../pkl/helpers.pkl" as h
+import "../pkl/karabiner.pkl" as k
+import "../pkl/keys.pkl"
 
 local capsToEscRule = h.capsToEsc()
 local capsToCtrlEscRule = h.capsToCtrlEsc()

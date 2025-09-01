@@ -1,18 +1,18 @@
 [package]
-name = "karabiner-pkl"
+name = "ankura"
 version = "0.2.0"
 edition = "2021"
 authors = ["Lucas Rangel"]
 description = "Karabiner configuration using Apple Pkl language"
 license = "MIT"
-repository = "https://github.com/username/karabiner-pkl"
+repository = "https://github.com/lrangell/ankura"
 
 [lib]
-name = "karabiner_pkl"
+name = "ankura"
 path = "src/lib.rs"
 
 [[bin]]
-name = "karabiner-pkl"
+name = "ankura"
 path = "src/main.rs"
 
 [dependencies]

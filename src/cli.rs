@@ -8,13 +8,13 @@ use std::path::{Path, PathBuf};
 use tracing::info;
 
 #[derive(Parser)]
-#[command(name = "karabiner-pkl")]
+#[command(name = "ankura")]
 #[command(author, version, about = "Karabiner configuration using Apple Pkl", long_about = None)]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Commands,
 
-    #[arg(short, long, global = true, default_value = "~/.config/karabiner.pkl")]
+    #[arg(short, long, global = true, default_value = "~/.config/ankura.pkl")]
     pub config: String,
 
     #[arg(short, long, global = true)]
@@ -76,14 +76,11 @@ pub enum Commands {
     },
 }
 
-// CLI command implementations
-
 pub async fn start_daemon(config_path: PathBuf, foreground: bool) -> Result<()> {
     let daemon = Daemon::new(config_path)?;
     daemon.start().await?;
 
     if foreground {
-        // Keep the process running
         tokio::signal::ctrl_c().await.unwrap();
         daemon.stop().await?;
     }
@@ -92,7 +89,7 @@ pub async fn start_daemon(config_path: PathBuf, foreground: bool) -> Result<()> 
 }
 
 pub async fn stop_daemon() -> Result<()> {
-    info!("Stopping karabiner-pkl daemon");
+    info!("Stopping ankura daemon");
     println!("Daemon stopped");
     Ok(())
 }
@@ -105,7 +102,6 @@ pub async fn compile_once(
     let compiler = Compiler::new()?;
     let compiled_config = compiler.compile(&config_path, profile_name).await?;
 
-    // Determine output path
     let output_path = if let Some(path) = output {
         PathBuf::from(path)
     } else {
@@ -115,15 +111,12 @@ pub async fn compile_once(
         home.join(".config/karabiner/karabiner.json")
     };
 
-    // Merge with existing configuration if needed
     let final_config = if output_path.exists() {
         merge_configurations(&output_path, compiled_config)?
     } else {
-        // No existing config, just use the compiled one
         compiled_config
     };
 
-    // Write the configuration
     write_karabiner_config(&output_path, &final_config)?;
 
     info!(
@@ -173,9 +166,9 @@ pub fn show_logs(log_file: PathBuf, lines: usize, follow: bool) -> Result<()> {
 }
 
 pub async fn show_status() -> Result<()> {
-    println!("karabiner-pkl status:");
+    println!("ankura status:");
     println!("  Daemon: stopped");
-    println!("  Config: ~/.config/karabiner.pkl");
+    println!("  Config: ~/.config/ankura.pkl");
     Ok(())
 }
 
@@ -186,59 +179,40 @@ pub async fn init_config(config_path: PathBuf, force: bool) -> Result<()> {
         return Ok(());
     }
 
-    // Ensure pkl files are materialized by creating a compiler instance
     let _compiler = crate::compiler::Compiler::new()?;
 
-    // Get the actual data directory path
-    let data_dir = dirs::data_local_dir()
-        .ok_or_else(|| crate::error::KarabinerPklError::DaemonError {
-            message: "Could not find local data directory".to_string(),
-        })?
-        .join("karabiner-pkl");
+    let data_dir = std::path::PathBuf::from("/opt/homebrew/share/ankura");
 
     println!("✅ Pkl library files ready at {}", data_dir.display());
 
-    let example_config = r#"// Karabiner configuration using Pkl
-// Import the karabiner library from the embedded module path
-import "modulepath:/karabiner.pkl"
-import "modulepath:/helpers.pkl"
+    let example_config = format!(
+        r#"// Simple Karabiner configuration with unified userconfig
+amends "{}/config.pkl"
 
-// Create a simple configuration
-config = new karabiner.SimpleConfig {
-  // Example: Map Caps Lock to Escape when tapped, Control when held
-  simple_modifications = List()
-  
-  complex_modifications = new karabiner.ComplexModifications {
-    rules = List(
-      new karabiner.Rule {
-        description = "Caps Lock to Control/Escape"
-        manipulators = List(
-          helpers.dualFunction(
-            new karabiner.KeyCode { key_code = "caps_lock" }, 
-            new karabiner.ToEvent.KeyEvent { key_code = "left_control" }, 
-            new karabiner.ToEvent.KeyEvent { key_code = "escape" }
-          )
-        )
-      }
-    )
-  }
-}.toConfig()
-"#;
+name = "My Karabiner Config"
 
-    // Create PklProject file content with the actual data directory path
-    let pkl_project = format!(
-        r#"amends "pkl:Project"
-
-evaluatorSettings {{
-  modulePath {{
-    "{}"
-  }}
-}}
+rules = List(
+    new DualUse {{
+        key = outer.keys.caps_lock
+        tap = outer.keys.escape
+        hold = outer.keys.left_control
+    }},
+    
+    new SimLayer {{
+        trigger = outer.keys.f
+        h = outer.keys.left_arrow    // h -> Left
+        j = outer.keys.down_arrow    // j -> Down  
+        u = outer.keys.up_arrow      // u -> Up
+        l = outer.keys.right_arrow   // l -> Right
+    }}
+)
 "#,
         data_dir.display()
     );
 
-    // Ensure parent directory exists
+    let pkl_project = r#"amends "pkl:Project"
+"#;
+
     if let Some(parent) = config_path.parent() {
         std::fs::create_dir_all(parent).map_err(|e| KarabinerPklError::ConfigWriteError {
             path: parent.to_path_buf(),
@@ -253,7 +227,6 @@ evaluatorSettings {{
         }
     })?;
 
-    // Write PklProject file in the same directory
     if let Some(parent) = config_path.parent() {
         let pkl_project_path = parent.join("PklProject");
         std::fs::write(&pkl_project_path, pkl_project).map_err(|e| {
@@ -266,7 +239,7 @@ evaluatorSettings {{
     }
 
     println!("Created example configuration at {}", config_path.display());
-    println!("Edit this file and run 'karabiner-pkl compile' to apply changes");
+    println!("Edit this file and run 'ankura compile' to apply changes");
     Ok(())
 }
 
@@ -287,10 +260,7 @@ pub async fn add_import(source: String, name: Option<String>) -> Result<()> {
     Ok(())
 }
 
-// Helper functions for configuration management
-
 pub fn merge_configurations(existing_path: &Path, new_config: Value) -> Result<Value> {
-    // Read existing configuration
     let existing_content =
         std::fs::read_to_string(existing_path).map_err(|e| KarabinerPklError::ConfigReadError {
             path: existing_path.to_path_buf(),
@@ -300,11 +270,9 @@ pub fn merge_configurations(existing_path: &Path, new_config: Value) -> Result<V
     let mut existing_config: Value = serde_json::from_str(&existing_content)
         .map_err(|e| KarabinerPklError::JsonParseError { source: e })?;
 
-    // Extract the profile from the new config
     let new_profile = new_config["profiles"][0].clone();
     let target_profile_name = new_profile["name"].as_str().unwrap_or("pkl");
 
-    // Ensure we have a profiles array
     if !existing_config
         .get("profiles")
         .map(|p| p.is_array())
@@ -313,25 +281,20 @@ pub fn merge_configurations(existing_path: &Path, new_config: Value) -> Result<V
         existing_config["profiles"] = serde_json::json!([]);
     }
 
-    // Update or add the profile
     let profiles = existing_config["profiles"].as_array_mut().unwrap();
 
-    // Find existing profile with the same name
     let existing_profile_index = profiles
         .iter()
         .position(|p| p["name"].as_str() == Some(target_profile_name));
 
     if let Some(index) = existing_profile_index {
-        // Update existing profile
         profiles[index] = new_profile;
     } else {
-        // Add new profile - should not be selected by default
         let mut profile_to_add = new_profile;
         profile_to_add["selected"] = serde_json::json!(false);
         profiles.push(profile_to_add);
     }
 
-    // Set title if not present
     if existing_config.get("title").is_none() {
         existing_config["title"] = new_config
             .get("title")
@@ -343,7 +306,6 @@ pub fn merge_configurations(existing_path: &Path, new_config: Value) -> Result<V
 }
 
 pub fn write_karabiner_config(path: &Path, config: &Value) -> Result<()> {
-    // Ensure parent directory exists
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent).map_err(|e| KarabinerPklError::KarabinerWriteError {
             path: parent.to_path_buf(),

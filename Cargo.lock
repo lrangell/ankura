@@ -27,6 +27,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "ankura"
+version = "0.2.0"
+dependencies = [
+ "clap",
+ "dirs 5.0.1",
+ "miette",
+ "notify",
+ "notify-debouncer-mini",
+ "notify-rust",
+ "pretty_assertions",
+ "reqwest",
+ "rust-embed",
+ "serde",
+ "serde_json",
+ "shellexpand",
+ "tempfile",
+ "thiserror 1.0.69",
+ "tokio",
+ "tokio-test",
+ "toml",
+ "tracing",
+ "tracing-subscriber",
+ "which",
+]
+
+[[package]]
 name = "anstream"
 version = "0.6.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1156,32 +1182,6 @@ checksum = "1cfaf33c695fc6e08064efbc1f72ec937429614f25eef83af942d0e227c3a28f"
 dependencies = [
  "once_cell",
  "wasm-bindgen",
-]
-
-[[package]]
-name = "karabiner-pkl"
-version = "0.2.0"
-dependencies = [
- "clap",
- "dirs 5.0.1",
- "miette",
- "notify",
- "notify-debouncer-mini",
- "notify-rust",
- "pretty_assertions",
- "reqwest",
- "rust-embed",
- "serde",
- "serde_json",
- "shellexpand",
- "tempfile",
- "thiserror 1.0.69",
- "tokio",
- "tokio-test",
- "toml",
- "tracing",
- "tracing-subscriber",
- "which",
 ]
 
 [[package]]
