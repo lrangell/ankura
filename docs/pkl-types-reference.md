@@ -2,6 +2,52 @@
 
 This document provides a comprehensive reference for the Pkl type system used in Karabiner-Pkl.
 
+## New Factory Functions API
+
+Karabiner-Pkl now includes a modern factory functions API that eliminates the need for complex nested `new` constructions. This API provides clean, readable syntax while maintaining full backward compatibility.
+
+### Quick Start with Factory Functions
+
+```pkl
+import "modulepath:/karabiner.pkl" as k
+import "modulepath:/helpers.pkl" as h  
+import "modulepath:/keys.pkl"
+
+// Simple configuration using new API
+config = k.config("MyProfile", List(
+  // Basic key remapping
+  k.rule("Caps to Escape", k.map(keys.caps_lock, keys.escape)),
+  
+  // Dual-use key  
+  k.rule("Space dual-use", k.dualUse(keys.spacebar, keys.left_option, keys.spacebar)),
+  
+  // Layer with vim navigation
+  k.layer(keys.left_option, k.mapping(new Mapping {
+    ["h"] = keys.left_arrow
+    ["j"] = keys.down_arrow 
+    ["k"] = keys.up_arrow
+    ["l"] = keys.right_arrow
+  })),
+  
+  // Helper shortcuts
+  h.capsToCtrlEsc(),
+  h.spaceToOpt()
+))
+```
+
+### Factory Function Reference
+
+| Function | Purpose | Example |
+|----------|---------|---------|
+| `k.map(from, to)` | Basic key remapping | `k.map(keys.caps_lock, keys.escape)` |
+| `k.withMods(mods, from, to)` | Key with modifiers | `k.withMods(keys.cmd, "t", keys.tab)` |
+| `k.dualUse(key, hold, tap)` | Dual-use key behavior | `k.dualUse(keys.spacebar, keys.opt, keys.spacebar)` |
+| `k.simul(keys, to)` | Simultaneous keys | `k.simul("jk", keys.escape)` |
+| `k.layer(mod, mappings)` | Modifier layer | `k.layer(keys.opt, mappings)` |
+| `k.simlayer(trigger, mappings)` | Simultaneous layer | `k.simlayer("f", mappings)` |
+| `k.rule(desc, manipulator)` | Create rule | `k.rule("My Rule", manipulator)` |
+| `k.config(name, rules)` | Create config | `k.config("Profile", ruleList)` |
+
 ## Core Configuration Types
 
 ### Config

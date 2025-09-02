@@ -75,7 +75,7 @@ The Compiler is a pure transformation module that converts Pkl files to JSON wit
 struct Compiler {
     pkl_path: PathBuf,              // Path to pkl binary
     _embedded_temp_dir: TempDir,    // Keeps temp dir alive
-    embedded_lib_path: PathBuf,     // Extracted pkl-lib path
+    embedded_lib_path: PathBuf,     // Extracted pkl path
 }
 ```
 
@@ -258,7 +258,7 @@ Embedded Pkl library functionality is now integrated into the compiler module.
 ### Process
 
 1. **Build Time**
-   - `rust_embed` includes pkl-lib/*.pkl files
+   - `rust_embed` includes pkl/*.pkl files
    - Files become part of binary
 
 2. **Runtime**

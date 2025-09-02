@@ -1,10 +1,10 @@
 # Embedded Pkl Library
 
-Starting with version 0.2.0, karabiner-pkl embeds the pkl library files directly in the binary. This means you no longer need to manually install or manage the pkl-lib files.
+Starting with version 0.2.0, karabiner-pkl embeds the pkl library files directly in the binary. This means you no longer need to manually install or manage the pkl files.
 
 ## How It Works
 
-1. The pkl-lib files (`karabiner.pkl` and `helpers.pkl`) are embedded in the binary using rust-embed
+1. The pkl files (`karabiner.pkl` and `helpers.pkl`) are embedded in the binary using rust-embed
 2. At runtime, these files are materialized to:
    - macOS: `~/Library/Application Support/karabiner-pkl/`
    - Linux: `~/.local/share/karabiner-pkl/`
@@ -38,9 +38,9 @@ import "modulepath:/karabiner.pkl"
 
 ## Technical Details
 
-- Files are embedded at compile time from the `pkl-lib/` directory
+- Files are embedded at compile time from the `pkl/` directory
 - Materialized to platform-specific data directory for persistent access
-- A hash file (`.pkl-lib-hash`) tracks the embedded version to detect updates
+- A hash file (`.pkl-hash`) tracks the embedded version to detect updates
 - Module resolution works for both embedded files and user-provided modules in `~/.config/karabiner_pkl/lib/`
 
 ## LSP Support

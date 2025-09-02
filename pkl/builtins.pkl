@@ -1,0 +1,438 @@
+/// Built-in keyboard configuration helpers for common Karabiner-Elements patterns.
+///
+/// This module provides high-level helper functions that implement the most popular
+/// and commonly requested keyboard modifications, based on community usage patterns
+/// from the Karabiner-Elements ecosystem.
+///
+/// ## Available Helpers
+///
+/// - **Hyper Key**: Map a key to all four modifiers (⌃⌥⇧⌘) for global shortcuts
+/// - **Symbol Layer**: Quick access to programming symbols without reaching for number row
+/// - **Simultaneous Combos**: Two-key chord shortcuts (e.g., j+k → escape)
+/// - **Key Swaps**: Common key remapping presets
+/// - **Sticky Modifiers**: One-shot modifiers for ergonomic typing
+///
+/// All functions return `karabiner.Rule` objects that can be added to your configuration's
+/// rules list. These helpers are designed to be composable - you can combine multiple
+/// helpers to create sophisticated keyboard layouts.
+module builtins
+
+import "karabiner.pkl"
+import "keys.pkl"
+
+/// Creates a hyper key that maps a trigger key to all four modifiers (⌃⌥⇧⌘) when held.
+///
+/// The hyper key is one of the most popular Karabiner-Elements modifications. It allows
+/// you to create global keyboard shortcuts that won't conflict with application shortcuts,
+/// since no application uses all four modifiers simultaneously.
+///
+/// ## Example
+/// ```pkl
+/// // Caps Lock becomes hyper key
+/// rules = List(builtins.hyperKey())
+/// 
+/// // Custom trigger key  
+/// rules = List(builtins.hyperKey(keys.right_command))
+/// ```
+///
+/// ## Parameters
+/// - `triggerKey`: The key to convert into a hyper key (default: caps_lock)
+///
+/// ## Returns
+/// A `karabiner.Rule` that maps the trigger key to ⌃⌥⇧⌘ when held.
+function hyperKey(triggerKey: String?): karabiner.Rule = 
+  let (key = triggerKey ?? keys.caps_lock)
+  karabiner.rule(
+    "Hyper Key: \(key) to ⌃⌥⇧⌘",
+    karabiner.map(key, new karabiner.ToEvent {
+      key_code = key
+      modifiers = List(keys.left_control, keys.left_option, keys.left_shift, keys.left_command)
+    })
+  )
+
+/// Creates a dual-use hyper key that acts as ⌃⌥⇧⌘ when held with other keys, 
+/// and escape when tapped alone.
+///
+/// ## Example
+/// ```pkl
+/// // Caps Lock: hyper when held, escape when tapped
+/// rules = List(builtins.hyperKeyDualUse())
+/// 
+/// // Custom key with dual behavior
+/// rules = List(builtins.hyperKeyDualUse(keys.tab))
+/// ```
+///
+/// ## Parameters
+/// - `triggerKey`: The key to convert into a dual-use hyper key (default: caps_lock)
+///
+/// ## Returns
+/// A `karabiner.Rule` with dual-use behavior: ⌃⌥⇧⌘ when held, escape when tapped.
+function hyperKeyDualUse(triggerKey: String?): karabiner.Rule =
+  let (key = triggerKey ?? keys.caps_lock)
+  karabiner.rule(
+    "Dual-Use Hyper Key: \(key) to ⌃⌥⇧⌘/escape",
+    karabiner.dualUse(
+      key, 
+      new karabiner.ToEvent {
+        key_code = key
+        modifiers = List(keys.left_control, keys.left_option, keys.left_shift, keys.left_command)
+      },
+      keys.escape
+    )
+  )
+
+/// Creates a symbol layer for quick access to programming symbols and special characters.
+///
+/// When holding the trigger key, common letter keys are mapped to frequently used symbols,
+/// eliminating the need to reach for the number row or use shift combinations. This is
+/// especially popular among programmers and writers.
+///
+/// ## Default Mappings (when mappings is null)
+/// | Key | Symbol | Key | Symbol | Key | Symbol |
+/// |-----|--------|-----|--------|-----|--------|
+/// | a   | _      | q   | !      | z   | <      |
+/// | s   | -      | w   | @      | x   | >      |
+/// | d   | =      | e   | #      | c   | `      |
+/// | f   | +      | r   | $      | v   | "      |
+/// | g   | *      | t   | %      | b   | '      |
+/// | h   | (      | y   | ^      | ;   | {      |
+/// | j   | )      | u   | &      | '   | }      |
+/// | k   | \[    | i   | |      | p   | ~      |
+/// | l   | \]    | o   | \      |     |        |
+///
+/// ## Examples
+/// ```pkl
+/// // Default symbol layer with right shift
+/// rules = List(builtins.symbolLayer(keys.right_shift))
+/// 
+///
+/// ## Parameters
+/// - `triggerKey`: The key that activates the symbol layer when held
+/// - `mappings`: Optional custom symbol mappings (uses defaults if null)
+///
+/// ## Returns
+/// A `karabiner.Rule` that creates the symbol layer.
+function symbolLayer(triggerKey: String, mappings: Mapping<String, karabiner.KeyListInput>?): karabiner.Rule =
+  let (defaultMappings = new Mapping {
+    ["a"] = new karabiner.ToEvent { key_code = keys.hyphen; modifiers = List(keys.left_shift) }        // _
+    ["s"] = keys.hyphen                                                                                 // -
+    ["d"] = keys.equal_sign                                                                            // =
+    ["f"] = new karabiner.ToEvent { key_code = keys.equal_sign; modifiers = List(keys.left_shift) }   // +
+    ["g"] = new karabiner.ToEvent { key_code = "8"; modifiers = List(keys.left_shift) }               // *
+    ["h"] = new karabiner.ToEvent { key_code = "9"; modifiers = List(keys.left_shift) }               // (
+    ["j"] = new karabiner.ToEvent { key_code = "0"; modifiers = List(keys.left_shift) }               // )
+    ["k"] = keys.open_bracket                                                                          // [
+    ["l"] = keys.close_bracket                                                                         // ]
+    ["semicolon"] = new karabiner.ToEvent { key_code = keys.open_bracket; modifiers = List(keys.left_shift) }  // {
+    ["quote"] = new karabiner.ToEvent { key_code = keys.close_bracket; modifiers = List(keys.left_shift) }     // }
+    ["q"] = new karabiner.ToEvent { key_code = "1"; modifiers = List(keys.left_shift) }               // !
+    ["w"] = new karabiner.ToEvent { key_code = "2"; modifiers = List(keys.left_shift) }               // @
+    ["e"] = new karabiner.ToEvent { key_code = "3"; modifiers = List(keys.left_shift) }               // #
+    ["r"] = new karabiner.ToEvent { key_code = "4"; modifiers = List(keys.left_shift) }               // $
+    ["t"] = new karabiner.ToEvent { key_code = "5"; modifiers = List(keys.left_shift) }               // %
+    ["y"] = new karabiner.ToEvent { key_code = "6"; modifiers = List(keys.left_shift) }               // ^
+    ["u"] = new karabiner.ToEvent { key_code = "7"; modifiers = List(keys.left_shift) }               // &
+    ["i"] = new karabiner.ToEvent { key_code = keys.backslash; modifiers = List(keys.left_shift) }    // |
+    ["o"] = keys.backslash                                                                             // \
+    ["p"] = new karabiner.ToEvent { key_code = keys.grave_accent_and_tilde; modifiers = List(keys.left_shift) } // ~
+    ["z"] = new karabiner.ToEvent { key_code = keys.comma; modifiers = List(keys.left_shift) }        // <
+    ["x"] = new karabiner.ToEvent { key_code = keys.period; modifiers = List(keys.left_shift) }       // >
+    ["c"] = keys.grave_accent_and_tilde                                                               // `
+    ["v"] = new karabiner.ToEvent { key_code = keys.quote; modifiers = List(keys.left_shift) }        // "
+    ["b"] = keys.quote                                                                                 // '
+  })
+  karabiner.layer(triggerKey, mappings ?? defaultMappings)
+
+/// Creates a simultaneous key combination that triggers when two keys are pressed together.
+///
+/// Simultaneous combinations (chords) allow you to create shortcuts by pressing two keys
+/// at the same time, similar to playing a chord on a piano. This is popular for creating
+/// ergonomic shortcuts that don't require awkward finger stretches.
+///
+/// ## Examples
+/// ```pkl
+/// // Home row escape: j+k pressed together → escape
+/// rules = List(builtins.simultaneous("j", "k", keys.escape))
+/// 
+/// // Quick navigation
+/// rules = List(
+///   builtins.simultaneous("h", "j", keys.page_up),
+///   builtins.simultaneous("k", "l", keys.page_down)
+/// )
+/// 
+/// // Custom threshold for faster/slower typing
+/// rules = List(builtins.simultaneous("f", "d", keys.delete_forward, 30))
+/// 
+/// // Complex actions with modifiers
+/// rules = List(builtins.simultaneous("g", "h", new karabiner.ToEvent {
+///   key_code = keys.left_arrow
+///   modifiers = List(keys.cmd)  // Browser back
+/// }))
+/// ```
+///
+/// ## Parameters
+/// - `first`: The first key in the simultaneous combination
+/// - `second`: The second key in the simultaneous combination  
+/// - `to`: The action to trigger (key, key list, or ToEvent)
+/// - `threshold`: Time window in milliseconds for simultaneous detection (default: 50ms)
+///
+/// ## Returns
+/// A `karabiner.Rule` that creates the simultaneous key combination.
+function simultaneous(first: String, second: String, to: karabiner.KeyListInput, threshold: Int?): karabiner.Rule =
+  let (thresholdMs = threshold ?? 50)
+  karabiner.rule(
+    "Simultaneous: \(first)+\(second) → \(to)",
+    karabiner.simulWithOptions(
+      List(first, second),
+      to,
+      new karabiner.SimultaneousOptions {
+        key_down_order = "insensitive"
+        key_up_order = "insensitive"
+        to_after_key_up = List(new karabiner.ToEvent {})
+        detect_key_down_uninterruptedly = true
+      }
+    )
+  )
+
+/// Swaps the function of two keys with each other.
+///
+/// Key swapping is useful for personalizing your keyboard layout or fixing
+/// keys that are in inconvenient positions. The swap is bidirectional.
+///
+/// ## Example
+/// ```pkl
+/// // Swap tab and escape keys
+/// rules = List(builtins.swapKeys(keys.tab, keys.escape))
+/// 
+/// // Swap shift and control for ergonomics
+/// rules = List(builtins.swapKeys(keys.left_shift, keys.left_control))
+/// ```
+///
+/// ## Parameters
+/// - `key1`: The first key to swap
+/// - `key2`: The second key to swap
+///
+/// ## Returns
+/// A `karabiner.Rule` that swaps the two keys.
+function swapKeys(key1: String, key2: String): karabiner.Rule = new karabiner.Rule {
+  description = "Swap: \(key1) ↔ \(key2)"
+  manipulators = List(
+    karabiner.map(key1, key2),
+    karabiner.map(key2, key1)
+  )
+}
+
+/// Swaps semicolon and colon keys (semicolon without shift ↔ colon with shift).
+///
+/// This is one of the most popular key swaps, especially among programmers who
+/// use colons more frequently than semicolons in many languages.
+///
+/// ## Example
+/// ```pkl
+/// rules = List(builtins.swapSemicolon())
+/// ```
+///
+/// After applying this rule:
+/// - Pressing `;` produces `:`
+/// - Pressing `shift+;` produces `;`
+///
+/// ## Returns
+/// A `karabiner.Rule` that swaps semicolon and colon.
+function swapSemicolon(): karabiner.Rule = new karabiner.Rule {
+  description = "Swap: semicolon ↔ colon"
+  manipulators = List(
+    karabiner.map(keys.semicolon, new karabiner.ToEvent {
+      key_code = keys.semicolon
+      modifiers = List(keys.left_shift)
+    }),
+    karabiner.withMods(List(keys.left_shift), keys.semicolon, keys.semicolon)
+  )
+}
+
+/// Swaps grave accent (`) and escape keys.
+///
+/// Popular among Vim users and programmers who frequently use backticks
+/// for code blocks or template literals, making escape more accessible.
+///
+/// ## Example
+/// ```pkl
+/// rules = List(builtins.swapGraveEscape())
+/// ```
+///
+/// ## Returns
+/// A `karabiner.Rule` that swaps grave accent and escape.
+function swapGraveEscape(): karabiner.Rule =
+  swapKeys(keys.grave_accent_and_tilde, keys.escape)
+
+/// Swaps backslash (\) and pipe (|) keys.
+///
+/// Useful for programmers who use pipes more frequently than backslashes,
+/// especially in shell scripting and functional programming.
+///
+/// ## Example
+/// ```pkl
+/// rules = List(builtins.swapBackslashPipe())
+/// ```
+///
+/// ## Returns
+/// A `karabiner.Rule` that swaps backslash and pipe.
+function swapBackslashPipe(): karabiner.Rule = new karabiner.Rule {
+  description = "Swap: backslash ↔ pipe"
+  manipulators = List(
+    karabiner.map(keys.backslash, new karabiner.ToEvent {
+      key_code = keys.backslash
+      modifiers = List(keys.left_shift)
+    }),
+    karabiner.withMods(List(keys.left_shift), keys.backslash, keys.backslash)
+  )
+}
+
+/// Swaps caps lock and left control keys.
+///
+/// A classic ergonomic modification that puts control in a more accessible
+/// position, especially popular among Emacs users and touch typists.
+///
+/// ## Example
+/// ```pkl
+/// rules = List(builtins.swapCapsCtrl())
+/// ```
+///
+/// ## Returns
+/// A `karabiner.Rule` that swaps caps lock and left control.
+function swapCapsCtrl(): karabiner.Rule =
+  swapKeys(keys.caps_lock, keys.left_control)
+
+/// Swaps left command and left option keys.
+///
+/// Useful for users switching between different keyboard layouts or
+/// operating systems where these modifiers are in different positions.
+///
+/// ## Example
+/// ```pkl
+/// rules = List(builtins.swapCmdOpt())
+/// ```
+///
+/// ## Returns
+/// A `karabiner.Rule` that swaps left command and left option.
+function swapCmdOpt(): karabiner.Rule =
+  swapKeys(keys.left_command, keys.left_option)
+
+/// Creates a sticky (one-shot) modifier that applies to only the next key press.
+///
+/// Sticky modifiers improve ergonomics by eliminating the need to hold modifier
+/// keys. Tap the modifier key once, then press another key to get the modified
+/// action. The modifier "sticks" for one keypress then automatically releases.
+///
+/// ## Example
+/// ```pkl
+/// // Make left shift sticky - tap shift, then h → H
+/// rules = List(builtins.stickyModifier(keys.left_shift, keys.left_shift))
+/// 
+/// // Use custom trigger key - tap 'f' to make next key shifted
+/// rules = List(builtins.stickyModifier("f", keys.left_shift))
+/// ```
+///
+/// ## Workflow
+/// 1. Tap the sticky modifier key once
+/// 2. Type the next key - it will have the modifier applied
+/// 3. Continue typing normally - modifier is automatically released
+///
+/// ## Parameters
+/// - `triggerKey`: The key that activates the sticky modifier
+/// - `modifier`: The modifier to apply to the next keypress
+///
+/// ## Returns
+/// A `karabiner.Rule` that creates the sticky modifier behavior.
+function stickyModifier(triggerKey: String, modifier: String): karabiner.Rule =
+  karabiner.rule(
+    "Sticky \(modifier): \(triggerKey)",
+    karabiner.dualUse(triggerKey, modifier, triggerKey)
+  )
+
+/// Creates a sticky shift modifier using the default left shift key.
+///
+/// Tap left shift once to make the next keypress capitalized, without
+/// needing to hold the shift key down.
+///
+/// ## Example
+/// ```pkl
+/// rules = List(builtins.stickyShift())
+/// 
+/// // Custom trigger key
+/// rules = List(builtins.stickyShift("f"))
+/// ```
+///
+/// ## Parameters
+/// - `triggerKey`: The key that activates sticky shift (default: left_shift)
+///
+/// ## Returns
+/// A `karabiner.Rule` for sticky shift behavior.
+function stickyShift(triggerKey: String?): karabiner.Rule =
+  let (key = triggerKey ?? keys.left_shift)
+  stickyModifier(key, keys.left_shift)
+
+/// Creates a sticky command modifier using the default left command key.
+///
+/// Tap left command once to make the next keypress include command modifier,
+/// useful for single-handed shortcuts.
+///
+/// ## Example
+/// ```pkl
+/// rules = List(builtins.stickyCmd())
+/// 
+/// // Custom trigger key  
+/// rules = List(builtins.stickyCmd("d"))
+/// ```
+///
+/// ## Parameters
+/// - `triggerKey`: The key that activates sticky command (default: left_command)
+///
+/// ## Returns
+/// A `karabiner.Rule` for sticky command behavior.
+function stickyCmd(triggerKey: String?): karabiner.Rule =
+  let (key = triggerKey ?? keys.left_command)
+  stickyModifier(key, keys.left_command)
+
+/// Creates a sticky option modifier using the default left option key.
+///
+/// Tap left option once to make the next keypress include option modifier,
+/// useful for accessing special characters.
+///
+/// ## Example
+/// ```pkl
+/// rules = List(builtins.stickyOpt())
+/// 
+/// // Custom trigger key
+/// rules = List(builtins.stickyOpt("s"))
+/// ```
+///
+/// ## Parameters  
+/// - `triggerKey`: The key that activates sticky option (default: left_option)
+///
+/// ## Returns
+/// A `karabiner.Rule` for sticky option behavior.
+function stickyOpt(triggerKey: String?): karabiner.Rule =
+  let (key = triggerKey ?? keys.left_option)
+  stickyModifier(key, keys.left_option)
+
+/// Creates a sticky control modifier using the default left control key.
+///
+/// Tap left control once to make the next keypress include control modifier,
+/// useful for terminal shortcuts and text navigation.
+///
+/// ## Example
+/// ```pkl
+/// rules = List(builtins.stickyCtrl())
+/// 
+/// // Custom trigger key
+/// rules = List(builtins.stickyCtrl("a"))
+/// ```
+///
+/// ## Parameters
+/// - `triggerKey`: The key that activates sticky control (default: left_control)
+///
+/// ## Returns  
+/// A `karabiner.Rule` for sticky control behavior.
+function stickyCtrl(triggerKey: String?): karabiner.Rule =
+  let (key = triggerKey ?? keys.left_control)
+  stickyModifier(key, keys.left_control)

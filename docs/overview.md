@@ -1,6 +1,36 @@
 # Karabiner-Pkl Overview
 
-Karabiner-Pkl is a configuration tool for [Karabiner-Elements](https://karabiner-elements.pqrs.org/) (macOS keyboard customization) using Apple's [Pkl configuration language](https://pkl-lang.org/). It provides type-safe configuration with a rich standard library and live-reload daemon functionality.
+Karabiner-Pkl is a configuration tool for [Karabiner-Elements](https://karabiner-elements.pqrs.org/) (macOS keyboard customization) using Apple's [Pkl configuration language](https://pkl-lang.org/). It provides type-safe configuration with a modern factory functions API, rich standard library, and live-reload daemon functionality.
+
+## Quick Start
+
+```pkl
+import "modulepath:/karabiner.pkl" as k
+import "modulepath:/helpers.pkl" as h
+import "modulepath:/keys.pkl"
+
+// Simple, readable configuration
+config = k.config("MyProfile", List(
+  // Basic key remapping  
+  k.rule("Caps to Escape", k.map(keys.caps_lock, keys.escape)),
+  
+  // Dual-use keys
+  k.rule("Space dual-use", k.dualUse(keys.spacebar, keys.left_option, keys.spacebar)),
+  
+  // Navigation layer
+  k.layer(keys.left_option, k.mapping(new Mapping {
+    ["h"] = keys.left_arrow
+    ["j"] = keys.down_arrow
+    ["k"] = keys.up_arrow
+    ["l"] = keys.right_arrow
+  })),
+  
+  // Helper shortcuts
+  h.capsToCtrlEsc(),
+  h.spaceToOpt(),
+  h.vimNavigation()
+))
+```
 
 ## Architecture Overview
 
@@ -43,11 +73,28 @@ Karabiner-Pkl is a configuration tool for [Karabiner-Elements](https://karabiner
 
 ## Key Features
 
-1. **Type-Safe Configuration**: All Karabiner concepts are strongly typed in Pkl
-2. **Live Reload**: Daemon watches configuration files and auto-recompiles on changes
-3. **Rich Helper Library**: High-level functions for common patterns (layers, vim navigation, app switching)
-4. **Module System**: Import additional Pkl modules from local paths or URLs
-5. **Error Recovery**: Daemon continues running even if compilation fails
+1. **Factory Functions API**: Clean, readable syntax eliminating verbose `new` constructions
+2. **Type-Safe Configuration**: All Karabiner concepts are strongly typed in Pkl
+3. **Keys Module**: Single source of truth for key constants with helpful aliases
+4. **Live Reload**: Daemon watches configuration files and auto-recompiles on changes
+5. **Rich Helper Library**: High-level functions for common patterns (layers, vim navigation, app switching)
+6. **Module System**: Import additional Pkl modules from local paths or URLs
+7. **Error Recovery**: Daemon continues running even if compilation fails
+
+### Factory Functions API
+
+The new factory functions API provides clean, readable syntax:
+
+- **`k.map(from, to)`** - Basic key remapping
+- **`k.withMods(modifiers, from, to)`** - Keys with modifiers
+- **`k.dualUse(key, hold, tap)`** - Dual-use behavior
+- **`k.simul(keys, to)`** - Simultaneous key combinations
+- **`k.layer(modifier, mappings)`** - Modifier layers
+- **`k.simlayer(trigger, mappings)`** - Simultaneous layers
+- **`k.rule(description, manipulator)`** - Rule creation
+- **`k.config(profileName, rules)`** - Configuration creation
+
+See the [Factory Functions Guide](factory-functions-guide.md) for complete documentation.
 6. **Native Notifications**: macOS notifications for compilation status
 7. **Embedded Resources**: Pkl library files are embedded in the binary for easy distribution
 
@@ -66,7 +113,7 @@ karabiner-pkl/
 │   ├── import/            # Module import functionality
 │   ├── logging.rs         # Structured logging
 │   └── lib.rs             # Library exports
-├── pkl-lib/               # Pkl type definitions
+├── pkl/                   # Pkl type definitions
 │   ├── karabiner.pkl      # Core types and SimpleConfig API
 │   └── helpers.pkl        # Helper functions and constants
 ├── tests/                 # Test suite

@@ -216,7 +216,7 @@ The `TestContext` provides:
 
 ### 2. Adding Pkl Helper Functions
 
-1. Add function to `pkl-lib/helpers.pkl`:
+1. Add function to `pkl/helpers.pkl`:
    ```pkl
    function myHelper(param: String) -> Rule = new Rule {
        description = "My helper function"
@@ -275,7 +275,7 @@ cargo run -- --debug compile
 
 2. **Module Import Errors**
    - Check module paths in Pkl files
-   - Verify pkl-lib files are embedded correctly
+   - Verify pkl files are embedded correctly
 
 3. **Permission Errors**
    - Ensure write access to `~/.config/karabiner/`
