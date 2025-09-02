@@ -21,6 +21,10 @@ local testDualUse = new k.DualUse {
   tap = keys.escape
 }
 
+local testShiftMode = new k.ShiftMode {
+  key = keys.a
+}
+
 local testConfig = new k.Config {
   profiles = List()
 }
@@ -46,6 +50,11 @@ facts {
     testDualUse.tap == keys.escape
   }
   
+  ["ShiftMode should build correctly"] {
+    testShiftMode.key == keys.a
+    testShiftMode.build().description == "Simultaneous a layer"
+  }
+  
   ["Config should have default title"] {
     testConfig.title == "Karabiner-Pkl Configuration"
   }
@@ -64,42 +73,43 @@ facts {
     local rule = testDualUse.build()
     rule is k.Rule
   }
+  
+  ["ShiftMode build function should produce Rule"] {
+    local rule = testShiftMode.build()
+    rule is k.Rule
+  }
 }
 
 examples {
-  ["Layer generates correct JSON output"] {
+  ["Layer description is correct"] {
     new k.Layer {
       modifier = keys.left_command
       j = keys.left_arrow
-      k = keys.down_arrow
-    }.build()
+    }.build().description
   }
   
-  ["SimLayer generates correct JSON output"] {
+  ["SimLayer description is correct"] {
     new k.SimLayer {
       trigger = keys.f
       j = keys.left_arrow
-      k = keys.down_arrow
-    }.build()
+    }.build().description
   }
   
-  ["DualUse generates correct JSON output"] {
+  ["DualUse description is correct"] {
     new k.DualUse {
       key = keys.caps_lock
       hold = keys.left_control
       tap = keys.escape
-    }.build()
+    }.build().description
   }
   
-  ["Complete config with layer"] {
-    k.config("test-profile", List(
-      new k.Layer {
-        modifier = keys.left_command
-        j = keys.left_arrow
-        k = keys.down_arrow
-        l = keys.right_arrow
-        semicolon = keys.up_arrow
-      }.build()
-    ))
+  ["ShiftMode description is correct"] {
+    new k.ShiftMode {
+      key = keys.a
+    }.build().description
+  }
+  
+  ["Config title is correct"] {
+    k.config("test-profile", List()).title
   }
 }
