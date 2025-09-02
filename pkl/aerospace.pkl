@@ -480,17 +480,17 @@ class AeroSpace {
   triggers: Triggers?
   
   /// Creates a shell command action for Karabiner-Elements
-  local function shellCommand(args: String): karabiner.ToEvent = new {
+  local function shellCommand(args: String): karabiner.ToEvent = (karabiner.ToEvent) {
     shell_command = "\(cmdPath) \(args)"
   }
   
   /// Creates a basic Karabiner manipulator for a key binding
   local function manipulator(key: String, modList: List<String>?, command: String): karabiner.Manipulator = 
-    new karabiner.Manipulator {
+    (karabiner.Manipulator) {
       type = "basic"
-      from = new karabiner.FromEvent {
+      from = (karabiner.FromEvent) {
         key_code = key
-        modifiers = if (modList != null) new karabiner.Modifiers {
+        modifiers = if (modList != null) (karabiner.Modifiers) {
           mandatory = modList
         } else null
       }
@@ -601,7 +601,7 @@ class AeroSpace {
         (if (focus.dfsPrev != null) List(manipulator(focus.dfsPrev, mods, "focus dfs-prev")) else List()))
       
       if (directional.isEmpty && special.isEmpty) null
-      else new karabiner.Rule {
+      else (karabiner.Rule) {
         description = "AeroSpace: Focus windows"
         manipulators = directional + special
       }
@@ -620,7 +620,7 @@ class AeroSpace {
       }, mods, "move"))
       
       if (directional.isEmpty) null
-      else new karabiner.Rule {
+      else (karabiner.Rule) {
         description = "AeroSpace: Move windows"
         manipulators = directional
       }
@@ -638,7 +638,7 @@ class AeroSpace {
         (if (resize.smartOpposite != null) List(manipulator(resize.smartOpposite, mods, "resize smart-opposite \(resize.amount)")) else List()))
       
       if (commands.isEmpty) null
-      else new karabiner.Rule {
+      else (karabiner.Rule) {
         description = "AeroSpace: Resize windows"
         manipulators = commands
       }
@@ -657,7 +657,7 @@ class AeroSpace {
         (if (layout.fullscreen != null) List(manipulator(layout.fullscreen, mods, "fullscreen")) else List()))
       
       if (commands.isEmpty) null
-      else new karabiner.Rule {
+      else (karabiner.Rule) {
         description = "AeroSpace: Window layout"
         manipulators = commands
       }
@@ -676,7 +676,7 @@ class AeroSpace {
       }, mods, "join-with"))
       
       if (directional.isEmpty) null
-      else new karabiner.Rule {
+      else (karabiner.Rule) {
         description = "AeroSpace: Join windows"
         manipulators = directional
       }
@@ -692,7 +692,7 @@ class AeroSpace {
         (if (close.allButCurrent != null) List(manipulator(close.allButCurrent, mods, "close-all-windows-but-current")) else List()))
       
       if (commands.isEmpty) null
-      else new karabiner.Rule {
+      else (karabiner.Rule) {
         description = "AeroSpace: Close windows"
         manipulators = commands
       }
@@ -708,7 +708,7 @@ class AeroSpace {
         (if (native.fullscreen != null) List(manipulator(native.fullscreen, mods, "macos-native-fullscreen")) else List()))
       
       if (commands.isEmpty) null
-      else new karabiner.Rule {
+      else (karabiner.Rule) {
         description = "AeroSpace: Native macOS operations"
         manipulators = commands
       }
@@ -735,7 +735,7 @@ class AeroSpace {
         (if (focus.prev != null) List(manipulator(focus.prev, mods, "workspace prev")) else List()))
       
       if (indexed.isEmpty && sequential.isEmpty) null
-      else new karabiner.Rule {
+      else (karabiner.Rule) {
         description = "AeroSpace: Focus workspaces"
         manipulators = indexed + sequential
       }
@@ -752,7 +752,7 @@ class AeroSpace {
         (if (move.prev != null) List(manipulator(move.prev, mods, "move-node-to-workspace prev")) else List()))
       
       if (indexed.isEmpty && sequential.isEmpty) null
-      else new karabiner.Rule {
+      else (karabiner.Rule) {
         description = "AeroSpace: Move to workspace"
         manipulators = indexed + sequential
       }
@@ -766,7 +766,7 @@ class AeroSpace {
       let (indexed = indexedManipulators(summon.mappings, mods, "summon-workspace"))
       
       if (indexed.isEmpty) null
-      else new karabiner.Rule {
+      else (karabiner.Rule) {
         description = "AeroSpace: Summon workspaces"
         manipulators = indexed
       }
@@ -782,7 +782,7 @@ class AeroSpace {
         (if (tree.accordion != null) List(manipulator(tree.accordion, mods, "layout accordion")) else List()))
       
       if (commands.isEmpty) null
-      else new karabiner.Rule {
+      else (karabiner.Rule) {
         description = "AeroSpace: Workspace tree operations"
         manipulators = commands
       }
@@ -811,7 +811,7 @@ class AeroSpace {
         (if (focus.prev != null) List(manipulator(focus.prev, mods, "focus-monitor prev")) else List()))
       
       if (indexed.isEmpty && directional.isEmpty && sequential.isEmpty) null
-      else new karabiner.Rule {
+      else (karabiner.Rule) {
         description = "AeroSpace: Focus monitors"
         manipulators = indexed + directional + sequential
       }
@@ -832,7 +832,7 @@ class AeroSpace {
         (if (move.prev != null) List(manipulator(move.prev, mods, "move-node-to-monitor prev")) else List()))
       
       if (indexed.isEmpty && directional.isEmpty && sequential.isEmpty) null
-      else new karabiner.Rule {
+      else (karabiner.Rule) {
         description = "AeroSpace: Move to monitor"
         manipulators = indexed + directional + sequential
       }
@@ -848,12 +848,12 @@ class AeroSpace {
   /// Generates mode activation rules
   local function generateModeActivationRules(): List<karabiner.Rule> =
     let (modeList = List(
-      new { name = "resize"; mode = modes?.resize },
-      new { name = "layout"; mode = modes?.layout },
-      new { name = "service"; mode = modes?.service },
-      new { name = "custom1"; mode = modes?.custom1 },
-      new { name = "custom2"; mode = modes?.custom2 },
-      new { name = "custom3"; mode = modes?.custom3 }
+      { name = "resize"; mode = modes?.resize },
+      { name = "layout"; mode = modes?.layout },
+      { name = "service"; mode = modes?.service },
+      { name = "custom1"; mode = modes?.custom1 },
+      { name = "custom2"; mode = modes?.custom2 },
+      { name = "custom3"; mode = modes?.custom3 }
     ))
     modeList
       .filter((entry) -> entry.mode != null)
@@ -863,7 +863,7 @@ class AeroSpace {
         let (manipulators = modeManipulators(mode, mods))
         
         if (manipulators.isEmpty) null
-        else new karabiner.Rule {
+        else (karabiner.Rule) {
           description = "AeroSpace: Activate \(entry.name) mode"
           manipulators = manipulators
         }
@@ -873,12 +873,12 @@ class AeroSpace {
   /// Generates mode-specific binding rules
   local function generateModeBindingRules(): List<karabiner.Rule> =
     let (modeList = List(
-      new { name = "resize"; mode = modes?.resize },
-      new { name = "layout"; mode = modes?.layout },
-      new { name = "service"; mode = modes?.service },
-      new { name = "custom1"; mode = modes?.custom1 },
-      new { name = "custom2"; mode = modes?.custom2 },
-      new { name = "custom3"; mode = modes?.custom3 }
+      { name = "resize"; mode = modes?.resize },
+      { name = "layout"; mode = modes?.layout },
+      { name = "service"; mode = modes?.service },
+      { name = "custom1"; mode = modes?.custom1 },
+      { name = "custom2"; mode = modes?.custom2 },
+      { name = "custom3"; mode = modes?.custom3 }
     ))
     modeList
       .filter((entry) -> entry.mode?.bindings != null)
@@ -886,7 +886,7 @@ class AeroSpace {
         let (manipulators = modeBindingManipulators(entry.name, entry.mode.bindings))
         
         if (manipulators.isEmpty) null
-        else new karabiner.Rule {
+        else (karabiner.Rule) {
           description = "AeroSpace: \(entry.name) mode bindings"
           manipulators = manipulators
           conditions = List(new karabiner.Condition {
@@ -914,7 +914,7 @@ class AeroSpace {
         .filter((m) -> m != null))
       
       if (manipulators.isEmpty) List()
-      else List(new karabiner.Rule {
+      else List((karabiner.Rule) {
         description = "AeroSpace: Launch applications"
         manipulators = manipulators
       })
@@ -932,7 +932,7 @@ class AeroSpace {
         (if (queries.workspaces != null) List(manipulator(queries.workspaces, mods, "list-workspaces")) else List()))
       
       if (commands.isEmpty) List()
-      else List(new karabiner.Rule {
+      else List((karabiner.Rule) {
         description = "AeroSpace: Query commands"
         manipulators = commands
       })
@@ -947,11 +947,11 @@ class AeroSpace {
           let (key = macro)
           let (commands = triggers.macros[macro])
           if (commands != null && !commands.isEmpty)
-            new karabiner.Manipulator {
+            (karabiner.Manipulator) {
               type = "basic"
-              from = new karabiner.FromEvent {
+              from = (karabiner.FromEvent) {
                 key_code = key
-                modifiers = if (mods != null) new karabiner.Modifiers {
+                modifiers = if (mods != null) (karabiner.Modifiers) {
                   mandatory = mods
                 } else null
               }
@@ -962,7 +962,7 @@ class AeroSpace {
         .filter((m) -> m != null))
       
       if (manipulators.isEmpty) List()
-      else List(new karabiner.Rule {
+      else List((karabiner.Rule) {
         description = "AeroSpace: Trigger bindings"
         manipulators = manipulators
       })

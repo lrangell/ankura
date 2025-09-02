@@ -203,20 +203,20 @@ typealias KeyInput = String|ToEvent
 typealias KeyListInput = KeyInput|List<KeyInput>
 typealias ModifierInput = String|List<String>
 
-function fromKey(key: String): FromEvent = new FromEvent {
+function fromKey(key: String): FromEvent = (FromEvent) {
   key_code = keys.validateKeyCode(key)
 }
 
-function fromKeyWithMods(key: String, modifiers: ModifierInput): FromEvent = new FromEvent {
+function fromKeyWithMods(key: String, modifiers: ModifierInput): FromEvent = (FromEvent) {
   key_code = keys.validateKeyCode(key)
-  modifiers = if (modifiers is String) new Modifiers { mandatory = List(modifiers) }
-              else new Modifiers { mandatory = modifiers }
+  modifiers = if (modifiers is String) (Modifiers) { mandatory = List(modifiers) }
+              else (Modifiers) { mandatory = modifiers }
 }
 
 function toKey(key: KeyListInput): List<ToEvent> = 
-  if (key is String) List(new ToEvent { key_code = keys.validateKeyCode(key) })
+  if (key is String) List((ToEvent) { key_code = keys.validateKeyCode(key) })
   else if (key is ToEvent) List(key)
-  else if (key is List) key.map((k) -> if (k is String) new ToEvent { key_code = keys.validateKeyCode(k) } else k).toList()
+  else if (key is List) key.map((k) -> if (k is String) (ToEvent) { key_code = keys.validateKeyCode(k) } else k).toList()
   else throw("Invalid key input type")
 
 function mapping(entries: Mapping<String, KeyListInput>): Mapping<String, KeyListInput> = entries
@@ -224,18 +224,18 @@ function mapping(entries: Mapping<String, KeyListInput>): Mapping<String, KeyLis
 function map(
   fromKey: String,
   toKey: KeyListInput
-): Manipulator = new Manipulator {
+): Manipulator = (Manipulator) {
   type = "basic"
-  from = new FromEvent { key_code = keys.validateKeyCode(fromKey) }
+  from = (FromEvent) { key_code = keys.validateKeyCode(fromKey) }
   to = toKey(toKey)
 }
 
 function manipulator(
   fromKey: String, 
   toKey: KeyListInput
-): Manipulator = new Manipulator {
+): Manipulator = (Manipulator) {
   type = "basic"
-  from = new FromEvent { key_code = keys.validateKeyCode(fromKey) }
+  from = (FromEvent) { key_code = keys.validateKeyCode(fromKey) }
   to = toKey(toKey)
 }
 
@@ -243,9 +243,9 @@ function manipulatorWithAlone(
   fromKey: String, 
   toKey: KeyListInput,
   aloneKey: KeyListInput
-): Manipulator = new Manipulator {
+): Manipulator = (Manipulator) {
   type = "basic"
-  from = new FromEvent { key_code = keys.validateKeyCode(fromKey) }
+  from = (FromEvent) { key_code = keys.validateKeyCode(fromKey) }
   to = toKey(toKey)
   to_if_alone = toKey(aloneKey)
 }
@@ -254,11 +254,11 @@ function withMods(
   mods: ModifierInput,
   fromKey: String,
   toKey: KeyListInput
-): Manipulator = new Manipulator {
+): Manipulator = (Manipulator) {
   type = "basic"
-  from = new FromEvent { 
+  from = (FromEvent) { 
     key_code = keys.validateKeyCode(fromKey)
-    modifiers = new Modifiers { 
+    modifiers = (Modifiers) { 
       mandatory = if (mods is String) List(mods) else mods
     }
   }
@@ -269,9 +269,9 @@ function dualUse(
   keyCode: String,
   holdAction: KeyListInput,
   tapAction: KeyListInput
-): Manipulator = new Manipulator {
+): Manipulator = (Manipulator) {
   type = "basic"
-  from = new FromEvent { key_code = keys.validateKeyCode(keyCode) }
+  from = (FromEvent) { key_code = keys.validateKeyCode(keyCode) }
   to = toKey(holdAction)
   to_if_alone = toKey(tapAction)
 }
@@ -281,10 +281,10 @@ function simul(
   toAction: KeyListInput
 ): Manipulator = 
   let (keyList = if (keyCodes is String) keyCodes.split("").toList() else keyCodes)
-  new Manipulator {
+  (Manipulator) {
     type = "basic"
-    from = new FromEvent {
-      simultaneous = keyList.map((k) -> new FromEvent { key_code = keys.validateKeyCode(k) }).toList()
+    from = (FromEvent) {
+      simultaneous = keyList.map((k) -> (FromEvent) { key_code = keys.validateKeyCode(k) }).toList()
     }
     to = toKey(toAction)
   }
@@ -295,10 +295,10 @@ function simulWithOptions(
   opts: SimultaneousOptions
 ): Manipulator = 
   let (keyList = if (keyCodes is String) keyCodes.split("").toList() else keyCodes)
-  new Manipulator {
+  (Manipulator) {
     type = "basic"
-    from = new FromEvent {
-      simultaneous = keyList.map((k) -> new FromEvent { key_code = keys.validateKeyCode(k) }).toList()
+    from = (FromEvent) {
+      simultaneous = keyList.map((k) -> (FromEvent) { key_code = keys.validateKeyCode(k) }).toList()
       simultaneous_options = opts
     }
     to = toKey(toAction)
@@ -307,7 +307,7 @@ function simulWithOptions(
 function layer(
   modifier: ModifierInput,
   mappings: Mapping<String, KeyListInput>
-): Rule = new Rule {
+): Rule = (Rule) {
   description = "Layer with \(modifier)"
   manipulators = mappings.toMap().entries.map((entry) -> 
     withMods(modifier, entry.key, entry.value)
@@ -317,10 +317,10 @@ function layer(
 function simlayer(
   trigger: String,
   mappings: Mapping<String, KeyListInput>
-): Rule = new Rule {
+): Rule = (Rule) {
   description = "Simultaneous \(trigger) layer"
   manipulators = mappings.toMap().entries.map((entry) -> 
-    simul(trigger + entry.key, entry.value)
+    simul(List(trigger, entry.key), entry.value)
   ).toList()
 }
 
@@ -328,17 +328,17 @@ function simlayerWithOptions(
   trigger: String,
   mappings: Mapping<String, KeyListInput>,
   options: SimultaneousOptions
-): Rule = new Rule {
+): Rule = (Rule) {
   description = "Simultaneous \(trigger) layer"
   manipulators = mappings.toMap().entries.map((entry) -> 
-    simulWithOptions(trigger + entry.key, entry.value, options)
+    simulWithOptions(List(trigger, entry.key), entry.value, options)
   ).toList()
 }
 
 function rule(
   desc: String,
   manipulator: Manipulator
-): Rule = new Rule {
+): Rule = (Rule) {
   description = desc
   manipulators = List(manipulator)
 }
@@ -358,7 +358,7 @@ function config(
 
 
 abstract class BaseLayer {
-  mappings: Mapping<String, KeyListInput> = new Mapping {}
+  mappings: Mapping<String, KeyListInput> = new Mapping { }
   
   a: KeyListInput?
   s: KeyListInput?
@@ -437,6 +437,11 @@ class SimLayer extends BaseLayer {
   function build(): Rule = self.simlayer(trigger, getAllMappings())
 }
 
+class SpaceMode extends SimLayer {
+  function build(): Rule = self.simlayer(keys.space, getAllMappings())
+}
+
+
 class DualUse {
   key: String
   tap: KeyListInput
@@ -449,5 +454,19 @@ class Layer extends BaseLayer {
   modifier: ModifierInput
   
   function build(): Rule = self.layer(modifier, getAllMappings())
+}
+
+const local shiftMappings: Mapping<String, KeyListInput> = new Mapping {
+  for (key in keys.allKeys) {
+    [key] = (ToEvent) { key_code = key; modifiers = List("left_shift") }
+  }
+}
+
+const function getAllShiftMappings(): Mapping<String, KeyListInput> = shiftMappings
+
+class ShiftMode {
+  key: String
+  
+  function build(): Rule = self.simlayer(key, getAllShiftMappings())
 }
 

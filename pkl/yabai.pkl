@@ -207,16 +207,16 @@ class Yabai {
   toggles: Toggles?
   stack: Stack?
   
-  local function shellCommand(args: String): karabiner.ToEvent = new {
+  local function shellCommand(args: String): karabiner.ToEvent = (karabiner.ToEvent) {
     shell_command = "\(cmdPath) \(args)"
   }
   
   local function manipulator(key: String, modList: List<String>?, command: String): karabiner.Manipulator = 
-    new karabiner.Manipulator {
+    (karabiner.Manipulator) {
       type = "basic"
-      from = new karabiner.FromEvent {
+      from = (karabiner.FromEvent) {
         key_code = key
-        modifiers = if (modList != null) new karabiner.Modifiers {
+        modifiers = if (modList != null) (karabiner.Modifiers) {
           mandatory = modList
         } else null
       }
@@ -263,12 +263,12 @@ class Yabai {
     else mappings.keys.toList()
       .map((index) ->
         let (key = mappings[index])
-        if (key != null) new karabiner.Manipulator {
+        if (key != null) (karabiner.Manipulator) {
           type = "basic"
-          from = new karabiner.FromEvent {
+          from = (karabiner.FromEvent) {
             simultaneous = List(
-              new karabiner.FromEvent { key_code = trigger },
-              new karabiner.FromEvent { key_code = key }
+              (karabiner.FromEvent) { key_code = trigger },
+              (karabiner.FromEvent) { key_code = key }
             )
           }
           to = List(shellCommand("\(commandPrefix) \(index)"))
@@ -323,7 +323,7 @@ class Yabai {
       }, mods, "-m window --focus"))
       
       if (directional.isEmpty && sequential.isEmpty) null
-      else new karabiner.Rule {
+      else (karabiner.Rule) {
         description = "Yabai: Focus windows"
         manipulators = directional + sequential
       }
@@ -348,7 +348,7 @@ class Yabai {
       }, mods, "-m window --swap"))
       
       if (directional.isEmpty && sequential.isEmpty) null
-      else new karabiner.Rule {
+      else (karabiner.Rule) {
         description = "Yabai: Swap windows"
         manipulators = directional + sequential
       }
@@ -373,7 +373,7 @@ class Yabai {
       }, mods, "-m window --warp"))
       
       if (directional.isEmpty && sequential.isEmpty) null
-      else new karabiner.Rule {
+      else (karabiner.Rule) {
         description = "Yabai: Warp windows"
         manipulators = directional + sequential
       }
@@ -399,7 +399,7 @@ class Yabai {
         (if (resize.equalize != null) List(manipulator(resize.equalize, mods, "-m space --balance")) else List()))
       
       if (directional.isEmpty && special.isEmpty) null
-      else new karabiner.Rule {
+      else (karabiner.Rule) {
         description = "Yabai: Resize windows"
         manipulators = directional + special
       }
@@ -420,7 +420,7 @@ class Yabai {
         else List())
       
       if (directional.isEmpty && special.isEmpty) null
-      else new karabiner.Rule {
+      else (karabiner.Rule) {
         description = "Yabai: Move floating windows"
         manipulators = directional + special
       }
@@ -442,7 +442,7 @@ class Yabai {
         else List())
       
       if (directional.isEmpty && special.isEmpty) null
-      else new karabiner.Rule {
+      else (karabiner.Rule) {
         description = "Yabai: Window insertion"
         manipulators = directional + special
       }
@@ -474,7 +474,7 @@ class Yabai {
       }, mods, "-m space --focus"))
       
       if (indexed.isEmpty && sequential.isEmpty) null
-      else new karabiner.Rule {
+      else (karabiner.Rule) {
         description = "Yabai: Focus spaces"
         manipulators = indexed + sequential
       }
@@ -498,7 +498,7 @@ class Yabai {
       }, mods, "-m window --space"))
       
       if (indexed.isEmpty && sequential.isEmpty) null
-      else new karabiner.Rule {
+      else (karabiner.Rule) {
         description = "Yabai: Move to space"
         manipulators = indexed + sequential
       }
@@ -518,7 +518,7 @@ class Yabai {
         (if (layout.mirrorY != null) List(manipulator(layout.mirrorY, mods, "-m space --mirror y-axis")) else List()))
       
       if (commands.isEmpty) null
-      else new karabiner.Rule {
+      else (karabiner.Rule) {
         description = "Yabai: Layout operations"
         manipulators = commands
       }
@@ -545,7 +545,7 @@ class Yabai {
       }, mods, "-m display --focus"))
       
       if (indexed.isEmpty && sequential.isEmpty) null
-      else new karabiner.Rule {
+      else (karabiner.Rule) {
         description = "Yabai: Focus displays"
         manipulators = indexed + sequential
       }
@@ -565,7 +565,7 @@ class Yabai {
       }, mods, "-m window --display"))
       
       if (indexed.isEmpty && sequential.isEmpty) null
-      else new karabiner.Rule {
+      else (karabiner.Rule) {
         description = "Yabai: Move to display"
         manipulators = indexed + sequential
       }
@@ -592,7 +592,7 @@ class Yabai {
         (if (toggles.padding != null) List(manipulator(toggles.padding, mods, "-m space --toggle padding")) else List()))
       
       if (windowToggles.isEmpty && special.isEmpty) List()
-      else List(new karabiner.Rule {
+      else List((karabiner.Rule) {
         description = "Yabai: Toggle window states"
         manipulators = windowToggles + special
       })
@@ -617,7 +617,7 @@ class Yabai {
       }, mods, "-m window --focus stack"))
       
       if (commands.isEmpty) null
-      else new karabiner.Rule {
+      else (karabiner.Rule) {
         description = "Yabai: Focus stack"
         manipulators = commands
       }
@@ -635,7 +635,7 @@ class Yabai {
       }, mods, "-m window --swap stack"))
       
       if (commands.isEmpty) null
-      else new karabiner.Rule {
+      else (karabiner.Rule) {
         description = "Yabai: Swap stack"
         manipulators = commands
       }
