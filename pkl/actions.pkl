@@ -71,20 +71,8 @@ function brightnessDown(): karabiner.ToEvent = new karabiner.ToEvent {
 }
 
 
-function gitStatus(): karabiner.ToEvent = runShell("git status")
-function gitPush(): karabiner.ToEvent = runShell("git push")
-function gitPull(): karabiner.ToEvent = runShell("git pull")
-function gitLog(): karabiner.ToEvent = runShell("git log --oneline -10")
 
-function vscode(path: String = "."): karabiner.ToEvent = runShell("code \(path)")
-function npmTest(): karabiner.ToEvent = runShell("npm test")
-function npmBuild(): karabiner.ToEvent = runShell("npm run build")
-function npmStart(): karabiner.ToEvent = runShell("npm start")
 
-function newFile(path: String): karabiner.ToEvent = runShell("touch \"\(path)\"")
-function deleteFile(path: String): karabiner.ToEvent = runShell("rm \"\(path)\"")
-function copyFile(from: String, to: String): karabiner.ToEvent = runShell("cp \"\(from)\" \"\(to)\"")
-function moveFile(from: String, to: String): karabiner.ToEvent = runShell("mv \"\(from)\" \"\(to)\"")
 
 function screenshot(): karabiner.ToEvent = runShell("screencapture -c")
 function screenshotSelection(): karabiner.ToEvent = runShell("screencapture -c -s")
