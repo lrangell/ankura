@@ -5,6 +5,68 @@ import "keys.pkl" as keys
   
 import "karabiner.pkl" as self
 
+open class SimLayer extends BaseLayer  {
+
+    trigger: String  // e.g., "d"
+    layerName: String = "\(trigger)-layer"  // Variable name for the mode
+    hidden maps: Mapping<String, ToEvent>
+
+    function build(): Rule = new Rule {
+      description = "SimLayer \(trigger)"
+      manipulators =
+        // For each mapped key, create TWO manipulators:
+        // 1. Simultaneous trigger+key that activates mode AND executes action
+        maps.toMap().entries.flatMap((entry) -> List(
+
+          // Manipulator 1: Simultaneous key (activates mode + executes)
+          new Manipulator {
+            from = new FromEvent {
+              simultaneous = List(
+                new FromEvent { key_code = trigger },
+                new FromEvent { key_code = entry.key }
+              )
+              simultaneous_options = new SimultaneousOptions {
+                to_after_key_up = List(
+                  new ToEvent {
+                    set_variable = new SetVariable {
+                      name = layerName
+                      value = 0
+                    }
+                  }
+                )
+              }
+            }
+            to = List(
+              new ToEvent {
+                set_variable = new SetVariable {
+                  name = layerName
+                  value = 1 }
+              }
+            ) + List(entry.value)
+          },
+
+          new Manipulator {
+            from = new FromEvent {
+              key_code = entry.key
+            }
+            conditions = List(
+              new Condition {
+                type = "variable_if"
+                name = layerName
+                value = 1
+              }
+            )
+            to = List(entry.value)
+          }
+        )).toList()
+    }
+  }
+
+
+class SpaceMode extends SimLayer {
+  trigger = keys.space
+}
+
 class Config {
   title: String = "Karabiner-Pkl Configuration"
   profiles: List<Profile> = List(
@@ -37,6 +99,7 @@ class VirtualHidKeyboard {
   country_code: Int = 0
   indicate_sticky_modifier_keys_state: Boolean = true
   mouse_key_xy_scale: Int = 100
+  keyboard_type_v2: KeyboardType = "ansi"
 }
 
 class Device {
@@ -77,12 +140,15 @@ class ComplexModificationParameters {
   `basic.to_if_held_down_threshold_milliseconds`: Int = 500
 }
 
-class Rule {
+open class Rule {
   description: String
   manipulators: List<Manipulator>
 }
 
-class Manipulator {
+
+
+
+open class Manipulator {
   type: ManipulatorType = "basic"
   from: FromEvent
   to: List<ToEvent>?
@@ -94,6 +160,35 @@ class Manipulator {
 }
 
 typealias ManipulatorType = "basic" | "mouse_motion_to_scroll"
+
+
+
+
+class Mod {
+  mod: List<Modifier> | Modifier
+  mandatory = if (mod is Modifier) List(mod) else mod
+}
+
+class BasicMap extends Manipulator {
+  hidden mod: List<Modifier> | Modifier | String
+  hidden key: String
+  from = new FromEvent {
+    when (mod is List || mod is Modifier) {
+      modifiers = new Modifiers { 
+      mandatory = if (mod is List) mod else List(mod as Modifier)
+    }
+    } else {
+      simultaneous = List(new FromEvent {key_code = trace(mod)}, new FromEvent {key_code = key})
+      simultaneous_options = new SimultaneousOptions {}
+    }
+  }
+  to: List<ToEvent>?
+
+}
+
+function shell(cmd) = List(new ToEvent {shell_command = cmd})
+
+
 
 class FromEvent {
   key_code: KeyCode?
@@ -118,6 +213,13 @@ class ToEvent {
   repeat: Boolean?
   halt: Boolean?
   hold_down_milliseconds: Int?
+  
+  function withNotification(message: String): List<ToEvent> = List(
+    this,
+    new ToEvent {
+      shell_command = "osascript -e 'display notification \"\(message)\" with title \"Karabiner\"'"
+    }
+  )
 }
 
 class DelayedAction {
@@ -148,10 +250,10 @@ class Modifiers {
 typealias Modifier = "caps_lock" | "left_command" | "left_control" | "left_option" | "left_shift" | "right_command" | "right_control" | "right_option" | "right_shift" | "fn" | "command" | "control" | "option" | "shift" | "any"
 
 class SimultaneousOptions {
-  detect_key_down_uninterruptedly: Boolean?
-  key_down_order: "insensitive" | "strict" | "strict_inverse"?
-  key_up_order: "insensitive" | "strict" | "strict_inverse"?
-  hidden key_up_when: "any" | "all"?
+  detect_key_down_uninterruptedly: Boolean? = false
+  key_down_order: "insensitive" | "strict" | "strict_inverse" = "strict"
+  key_up_order: "insensitive" | "strict" | "strict_inverse" = "strict_inverse"
+  key_up_when: "any" | "all" = "any"
   to_after_key_up: List<ToEvent>?
 }
 
@@ -358,7 +460,7 @@ function config(
 
 
 abstract class BaseLayer {
-  mappings: Mapping<String, KeyListInput> = new Mapping { }
+  hidden mappings: Mapping<String, KeyListInput> = new Mapping { }
   
   a: KeyListInput?
   s: KeyListInput?
@@ -431,15 +533,12 @@ abstract class BaseLayer {
 }
 
   
-class SimLayer extends BaseLayer {
-  trigger: String
-  
-  function build(): Rule = self.simlayer(trigger, getAllMappings())
-}
+// open class SimLayer extends BaseLayer {
+//   trigger: String
+//
+//   function build(): Rule = self.simlayer(trigger, getAllMappings())
+// }
 
-class SpaceMode extends SimLayer {
-  function build(): Rule = self.simlayer(keys.space, getAllMappings())
-}
 
 
 class DualUse {
@@ -464,9 +563,8 @@ const local shiftMappings: Mapping<String, KeyListInput> = new Mapping {
 
 const function getAllShiftMappings(): Mapping<String, KeyListInput> = shiftMappings
 
-class ShiftMode {
+class ShiftMode extends BaseLayer{
   key: String
-  
   function build(): Rule = self.simlayer(key, getAllShiftMappings())
 }
 
