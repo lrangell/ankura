@@ -1,0 +1,81 @@
+module core_types
+import "karabiner.pkl"
+
+import "keys.pkl" as keys
+
+typealias Action = String | karabiner.Event | List<String|karabiner.Event>
+
+
+
+abstract class BaseLayer {
+  hidden mappings: Mapping<String, Action> = new Mapping { }
+  
+  a: Action?
+  s: Action?
+  d: Action?
+  f: Action?
+  g: Action?
+  h: Action?
+  j: Action?
+  k: Action?
+  l: Action?
+  semicolon: Action?
+  
+  q: Action?
+  w: Action?
+  e: Action?
+  r: Action?
+  t: Action?
+  y: Action?
+  u: Action?
+  i: Action?
+  o: Action?
+  p: Action?
+  
+  z: Action?
+  x: Action?
+  c: Action?
+  v: Action?
+  b: Action?
+  n: Action?
+  m: Action?
+  comma: Action?
+  period: Action?
+  
+  `1`: Action?
+  `2`: Action?
+  `3`: Action?
+  `4`: Action?
+  `5`: Action?
+  `6`: Action?
+  `7`: Action?
+  `8`: Action?
+  `9`: Action?
+  `0`: Action?
+  
+  abstract function build(): karabiner.Rule
+  
+  function getAllMappings(): Mapping<String, Action> = 
+    let (baseMap = mappings.toMap())
+    let (keyMap = this.toMap().filter((key, value) -> 
+      key != "mappings" && key != "trigger" && key != "modifier" && 
+      value != null && value is Action
+    ).map((key, value) -> Pair(
+      if (key == "semicolon") keys.semicolon
+      else if (key == "comma") keys.comma  
+      else if (key == "period") keys.period
+      else if (key == "1") keys.one
+      else if (key == "2") keys.two  
+      else if (key == "3") keys.three
+      else if (key == "4") keys.four
+      else if (key == "5") keys.five
+      else if (key == "6") keys.six
+      else if (key == "7") keys.seven
+      else if (key == "8") keys.eight
+      else if (key == "9") keys.nine
+      else if (key == "0") keys.zero
+      else key, 
+      value as Action
+    )).toMap())
+    baseMap.fold(keyMap, (acc, key, value) -> acc.put(key, value)).toMapping()
+}

@@ -1,71 +1,7 @@
 module karabiner
 
-import "keys.pkl" as keys
-
-  
-import "karabiner.pkl" as self
-
-open class SimLayer extends BaseLayer  {
-
-    trigger: String  // e.g., "d"
-    layerName: String = "\(trigger)-layer"  // Variable name for the mode
-    hidden maps: Mapping<String, ToEvent>
-
-    function build(): Rule = new Rule {
-      description = "SimLayer \(trigger)"
-      manipulators =
-        // For each mapped key, create TWO manipulators:
-        // 1. Simultaneous trigger+key that activates mode AND executes action
-        maps.toMap().entries.flatMap((entry) -> List(
-
-          // Manipulator 1: Simultaneous key (activates mode + executes)
-          new Manipulator {
-            from = new FromEvent {
-              simultaneous = List(
-                new FromEvent { key_code = trigger },
-                new FromEvent { key_code = entry.key }
-              )
-              simultaneous_options = new SimultaneousOptions {
-                to_after_key_up = List(
-                  new ToEvent {
-                    set_variable = new SetVariable {
-                      name = layerName
-                      value = 0
-                    }
-                  }
-                )
-              }
-            }
-            to = List(
-              new ToEvent {
-                set_variable = new SetVariable {
-                  name = layerName
-                  value = 1 }
-              }
-            ) + List(entry.value)
-          },
-
-          new Manipulator {
-            from = new FromEvent {
-              key_code = entry.key
-            }
-            conditions = List(
-              new Condition {
-                type = "variable_if"
-                name = layerName
-                value = 1
-              }
-            )
-            to = List(entry.value)
-          }
-        )).toList()
-    }
-  }
-
-
-class SpaceMode extends SimLayer {
-  trigger = keys.space
-}
+import "core_types.pkl"
+import "karabiner.pkl"
 
 class Config {
   title: String = "Karabiner-Pkl Configuration"
@@ -162,64 +98,45 @@ open class Manipulator {
 typealias ManipulatorType = "basic" | "mouse_motion_to_scroll"
 
 
-
-
-class Mod {
-  mod: List<Modifier> | Modifier
-  mandatory = if (mod is Modifier) List(mod) else mod
-}
-
-class BasicMap extends Manipulator {
-  hidden mod: List<Modifier> | Modifier | String
-  hidden key: String
-  from = new FromEvent {
-    when (mod is List || mod is Modifier) {
-      modifiers = new Modifiers { 
-      mandatory = if (mod is List) mod else List(mod as Modifier)
-    }
-    } else {
-      simultaneous = List(new FromEvent {key_code = trace(mod)}, new FromEvent {key_code = key})
-      simultaneous_options = new SimultaneousOptions {}
-    }
-  }
-  to: List<ToEvent>?
-
-}
-
-function shell(cmd) = List(new ToEvent {shell_command = cmd})
-
-
-
-class FromEvent {
+open class Event {
   key_code: KeyCode?
-  consumer_key_code: ConsumerKeyCode?
-  pointing_button: PointingButton?
   modifiers: Modifiers?
+  consumer_key_code: ConsumerKeyCode?
+
+  function addModifier(other: Modifier) = (this) {modifiers = (outer.modifiers ?? List()).add(other)}
+
+  hidden as_action: ToEvent = this.toDynamic().toTyped(ToEvent)
+  hidden as_input: FromEvent = this.toDynamic().toTyped(FromEvent)
+  hidden isMod = karabiner.isMod(key_code)
+  hidden keyAsModifier = if (isMod) addModifier(key_code) else throw("Key need to be a modifier")
+  hidden hasMod = modifiers.ifNonNull((it) -> !it.isEmpty) ?? false
+
+  function and(other: Event) = if (other.isMod) other.addModifier(key_code) else (keyAsModifier) {key_code = other.key_code}
+
+}
+
+
+class FromEvent extends Event{
+  pointing_button: PointingButton?
   simultaneous: List<FromEvent>?
   simultaneous_options: SimultaneousOptions?
 }
 
-class ToEvent {
-  key_code: KeyCode?
-  consumer_key_code: ConsumerKeyCode?
+class ToEvent extends Event{
   pointing_button: PointingButton?
   shell_command: String?
   select_input_source: InputSource?
   set_variable: SetVariable?
   mouse_key: MouseKey?
   sticky_modifier: StickyModifier?
-  modifiers: List<Modifier>?
   lazy: Boolean?
   repeat: Boolean?
   halt: Boolean?
   hold_down_milliseconds: Int?
-  
-  function withNotification(message: String): List<ToEvent> = List(
-    this,
-    new ToEvent {
-      shell_command = "osascript -e 'display notification \"\(message)\" with title \"Karabiner\"'"
-    }
-  )
+
+  function withNotification(message: String): List<ToEvent> = List(this, new ToEvent { shell_command = "osascript -e 'display notification \"\(message)\" with title \"Karabiner\"'" })
+  function build() = List(this)
+
 }
 
 class DelayedAction {
@@ -242,12 +159,11 @@ typealias ConditionType = "frontmost_application_if" | "frontmost_application_un
 
 typealias KeyboardType = "ansi" | "iso" | "jis"
 
-class Modifiers {
-  mandatory: List<Modifier>?
-  optional: List<Modifier>?
-}
 
 typealias Modifier = "caps_lock" | "left_command" | "left_control" | "left_option" | "left_shift" | "right_command" | "right_control" | "right_option" | "right_shift" | "fn" | "command" | "control" | "option" | "shift" | "any"
+typealias Modifiers = List<Modifier>
+function isMod(e)  = List("caps_lock" , "left_command" , "left_control" , "left_option" , "left_shift" , "right_command" , "right_control" , "right_option" , "right_shift" , "fn" , "command" , "control" , "option" , "shift" , "any").contains(e)
+mods  = new Listing {"caps_lock" ; "left_command" }
 
 class SimultaneousOptions {
   detect_key_down_uninterruptedly: Boolean? = false
@@ -293,278 +209,6 @@ class Parameters {
 }
 
 typealias KeyCode = String
-
 typealias ConsumerKeyCode = String
-
 typealias PointingButton = String
-
-typealias KeyPress = ToEvent
-
-
-typealias KeyInput = String|ToEvent
-typealias KeyListInput = KeyInput|List<KeyInput>
-typealias ModifierInput = String|List<String>
-
-function fromKey(key: String): FromEvent = (FromEvent) {
-  key_code = keys.validateKeyCode(key)
-}
-
-function fromKeyWithMods(key: String, modifiers: ModifierInput): FromEvent = (FromEvent) {
-  key_code = keys.validateKeyCode(key)
-  modifiers = if (modifiers is String) (Modifiers) { mandatory = List(modifiers) }
-              else (Modifiers) { mandatory = modifiers }
-}
-
-function toKey(key: KeyListInput): List<ToEvent> = 
-  if (key is String) List((ToEvent) { key_code = keys.validateKeyCode(key) })
-  else if (key is ToEvent) List(key)
-  else if (key is List) key.map((k) -> if (k is String) (ToEvent) { key_code = keys.validateKeyCode(k) } else k).toList()
-  else throw("Invalid key input type")
-
-function mapping(entries: Mapping<String, KeyListInput>): Mapping<String, KeyListInput> = entries
-
-function map(
-  fromKey: String,
-  toKey: KeyListInput
-): Manipulator = (Manipulator) {
-  type = "basic"
-  from = (FromEvent) { key_code = keys.validateKeyCode(fromKey) }
-  to = toKey(toKey)
-}
-
-function manipulator(
-  fromKey: String, 
-  toKey: KeyListInput
-): Manipulator = (Manipulator) {
-  type = "basic"
-  from = (FromEvent) { key_code = keys.validateKeyCode(fromKey) }
-  to = toKey(toKey)
-}
-
-function manipulatorWithAlone(
-  fromKey: String, 
-  toKey: KeyListInput,
-  aloneKey: KeyListInput
-): Manipulator = (Manipulator) {
-  type = "basic"
-  from = (FromEvent) { key_code = keys.validateKeyCode(fromKey) }
-  to = toKey(toKey)
-  to_if_alone = toKey(aloneKey)
-}
-
-function withMods(
-  mods: ModifierInput,
-  fromKey: String,
-  toKey: KeyListInput
-): Manipulator = (Manipulator) {
-  type = "basic"
-  from = (FromEvent) { 
-    key_code = keys.validateKeyCode(fromKey)
-    modifiers = (Modifiers) { 
-      mandatory = if (mods is String) List(mods) else mods
-    }
-  }
-  to = toKey(toKey)
-}
-
-function dualUse(
-  keyCode: String,
-  holdAction: KeyListInput,
-  tapAction: KeyListInput
-): Manipulator = (Manipulator) {
-  type = "basic"
-  from = (FromEvent) { key_code = keys.validateKeyCode(keyCode) }
-  to = toKey(holdAction)
-  to_if_alone = toKey(tapAction)
-}
-
-function simul(
-  keyCodes: String|List<String>,
-  toAction: KeyListInput
-): Manipulator = 
-  let (keyList = if (keyCodes is String) keyCodes.split("").toList() else keyCodes)
-  (Manipulator) {
-    type = "basic"
-    from = (FromEvent) {
-      simultaneous = keyList.map((k) -> (FromEvent) { key_code = keys.validateKeyCode(k) }).toList()
-    }
-    to = toKey(toAction)
-  }
-
-function simulWithOptions(
-  keyCodes: String|List<String>,
-  toAction: KeyListInput,
-  opts: SimultaneousOptions
-): Manipulator = 
-  let (keyList = if (keyCodes is String) keyCodes.split("").toList() else keyCodes)
-  (Manipulator) {
-    type = "basic"
-    from = (FromEvent) {
-      simultaneous = keyList.map((k) -> (FromEvent) { key_code = keys.validateKeyCode(k) }).toList()
-      simultaneous_options = opts
-    }
-    to = toKey(toAction)
-  }
-
-function layer(
-  modifier: ModifierInput,
-  mappings: Mapping<String, KeyListInput>
-): Rule = (Rule) {
-  description = "Layer with \(modifier)"
-  manipulators = mappings.toMap().entries.map((entry) -> 
-    withMods(modifier, entry.key, entry.value)
-  ).toList()
-}
-
-function simlayer(
-  trigger: String,
-  mappings: Mapping<String, KeyListInput>
-): Rule = (Rule) {
-  description = "Simultaneous \(trigger) layer"
-  manipulators = mappings.toMap().entries.map((entry) -> 
-    simul(List(trigger, entry.key), entry.value)
-  ).toList()
-}
-
-function simlayerWithOptions(
-  trigger: String,
-  mappings: Mapping<String, KeyListInput>,
-  options: SimultaneousOptions
-): Rule = (Rule) {
-  description = "Simultaneous \(trigger) layer"
-  manipulators = mappings.toMap().entries.map((entry) -> 
-    simulWithOptions(List(trigger, entry.key), entry.value, options)
-  ).toList()
-}
-
-function rule(
-  desc: String,
-  manipulator: Manipulator
-): Rule = (Rule) {
-  description = desc
-  manipulators = List(manipulator)
-}
-
-function config(
-  profileName: String,
-  ruleList: List<Rule>
-): Config = new Config {
-  profiles = List(new Profile {
-    name = profileName
-    selected = true
-    complex_modifications = new ComplexModifications {
-      rules = ruleList
-    }
-  })
-}
-
-
-abstract class BaseLayer {
-  hidden mappings: Mapping<String, KeyListInput> = new Mapping { }
-  
-  a: KeyListInput?
-  s: KeyListInput?
-  d: KeyListInput?
-  f: KeyListInput?
-  g: KeyListInput?
-  h: KeyListInput?
-  j: KeyListInput?
-  k: KeyListInput?
-  l: KeyListInput?
-  semicolon: KeyListInput?
-  
-  q: KeyListInput?
-  w: KeyListInput?
-  e: KeyListInput?
-  r: KeyListInput?
-  t: KeyListInput?
-  y: KeyListInput?
-  u: KeyListInput?
-  i: KeyListInput?
-  o: KeyListInput?
-  p: KeyListInput?
-  
-  z: KeyListInput?
-  x: KeyListInput?
-  c: KeyListInput?
-  v: KeyListInput?
-  b: KeyListInput?
-  n: KeyListInput?
-  m: KeyListInput?
-  comma: KeyListInput?
-  period: KeyListInput?
-  
-  `1`: KeyListInput?
-  `2`: KeyListInput?
-  `3`: KeyListInput?
-  `4`: KeyListInput?
-  `5`: KeyListInput?
-  `6`: KeyListInput?
-  `7`: KeyListInput?
-  `8`: KeyListInput?
-  `9`: KeyListInput?
-  `0`: KeyListInput?
-  
-  abstract function build(): Rule
-  
-  function getAllMappings(): Mapping<String, KeyListInput> = 
-    let (baseMap = mappings.toMap())
-    let (keyMap = this.toMap().filter((key, value) -> 
-      key != "mappings" && key != "trigger" && key != "modifier" && 
-      value != null && value is KeyListInput
-    ).map((key, value) -> Pair(
-      if (key == "semicolon") keys.semicolon
-      else if (key == "comma") keys.comma  
-      else if (key == "period") keys.period
-      else if (key == "1") keys.one
-      else if (key == "2") keys.two  
-      else if (key == "3") keys.three
-      else if (key == "4") keys.four
-      else if (key == "5") keys.five
-      else if (key == "6") keys.six
-      else if (key == "7") keys.seven
-      else if (key == "8") keys.eight
-      else if (key == "9") keys.nine
-      else if (key == "0") keys.zero
-      else key, 
-      value as KeyListInput
-    )).toMap())
-    baseMap.fold(keyMap, (acc, key, value) -> acc.put(key, value)).toMapping()
-}
-
-  
-// open class SimLayer extends BaseLayer {
-//   trigger: String
-//
-//   function build(): Rule = self.simlayer(trigger, getAllMappings())
-// }
-
-
-
-class DualUse {
-  key: String
-  tap: KeyListInput
-  hold: KeyListInput
-  
-  function build(): Rule = self.rule("Dual Use \(key)", self.dualUse(key, hold, tap))
-}
-
-class Layer extends BaseLayer {
-  modifier: ModifierInput
-  
-  function build(): Rule = self.layer(modifier, getAllMappings())
-}
-
-const local shiftMappings: Mapping<String, KeyListInput> = new Mapping {
-  for (key in keys.allKeys) {
-    [key] = (ToEvent) { key_code = key; modifiers = List("left_shift") }
-  }
-}
-
-const function getAllShiftMappings(): Mapping<String, KeyListInput> = shiftMappings
-
-class ShiftMode extends BaseLayer{
-  key: String
-  function build(): Rule = self.simlayer(key, getAllShiftMappings())
-}
 

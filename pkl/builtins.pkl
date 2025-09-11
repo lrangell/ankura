@@ -18,6 +18,7 @@
 module builtins
 
 import "karabiner.pkl"
+import "core.pkl"
 import "keys.pkl"
 
 /// Creates a hyper key that maps a trigger key to all four modifiers (⌃⌥⇧⌘) when held.
@@ -42,9 +43,9 @@ import "keys.pkl"
 /// A `karabiner.Rule` that maps the trigger key to ⌃⌥⇧⌘ when held.
 function hyperKey(triggerKey: String?): karabiner.Rule = 
   let (key = triggerKey ?? keys.caps_lock)
-  karabiner.rule(
+  core.rule(
     "Hyper Key: \(key) to ⌃⌥⇧⌘",
-    karabiner.map(key, new karabiner.ToEvent {
+    core.map(key, new karabiner.ToEvent {
       key_code = key
       modifiers = List(keys.left_control, keys.left_option, keys.left_shift, keys.left_command)
     })
@@ -69,9 +70,9 @@ function hyperKey(triggerKey: String?): karabiner.Rule =
 /// A `karabiner.Rule` with dual-use behavior: ⌃⌥⇧⌘ when held, escape when tapped.
 function hyperKeyDualUse(triggerKey: String?): karabiner.Rule =
   let (key = triggerKey ?? keys.caps_lock)
-  karabiner.rule(
+  core.rule(
     "Dual-Use Hyper Key: \(key) to ⌃⌥⇧⌘/escape",
-    karabiner.dualUse(
+    core.dualUse(
       key, 
       new karabiner.ToEvent {
         key_code = key
@@ -112,7 +113,7 @@ function hyperKeyDualUse(triggerKey: String?): karabiner.Rule =
 ///
 /// ## Returns
 /// A `karabiner.Rule` that creates the symbol layer.
-function symbolLayer(triggerKey: String, mappings: Mapping<String, karabiner.KeyListInput>?): karabiner.Rule =
+function symbolLayer(triggerKey: String, mappings: Mapping<String, core.Action>?): karabiner.Rule =
   let (defaultMappings = new Mapping {
     ["a"] = new karabiner.ToEvent { key_code = keys.hyphen; modifiers = List(keys.left_shift) }        // _
     ["s"] = keys.hyphen                                                                                 // -
@@ -141,7 +142,7 @@ function symbolLayer(triggerKey: String, mappings: Mapping<String, karabiner.Key
     ["v"] = new karabiner.ToEvent { key_code = keys.quote; modifiers = List(keys.left_shift) }        // "
     ["b"] = keys.quote                                                                                 // '
   })
-  karabiner.layer(triggerKey, mappings ?? defaultMappings)
+  core.layer(triggerKey, mappings ?? defaultMappings)
 
 /// Creates a simultaneous key combination that triggers when two keys are pressed together.
 ///
@@ -178,11 +179,11 @@ function symbolLayer(triggerKey: String, mappings: Mapping<String, karabiner.Key
 ///
 /// ## Returns
 /// A `karabiner.Rule` that creates the simultaneous key combination.
-function simultaneous(first: String, second: String, to: karabiner.KeyListInput, threshold: Int?): karabiner.Rule =
+function simultaneous(first: String, second: String, to: core.Action, threshold: Int?): karabiner.Rule =
   let (thresholdMs = threshold ?? 50)
-  karabiner.rule(
+  core.rule(
     "Simultaneous: \(first)+\(second) → \(to)",
-    karabiner.simulWithOptions(
+    core.simul(
       List(first, second),
       to,
       new karabiner.SimultaneousOptions {
@@ -217,8 +218,8 @@ function simultaneous(first: String, second: String, to: karabiner.KeyListInput,
 function swapKeys(key1: String, key2: String): karabiner.Rule = new karabiner.Rule {
   description = "Swap: \(key1) ↔ \(key2)"
   manipulators = List(
-    karabiner.map(key1, key2),
-    karabiner.map(key2, key1)
+    core.map(key1, key2),
+    core.map(key2, key1)
   )
 }
 
@@ -241,11 +242,11 @@ function swapKeys(key1: String, key2: String): karabiner.Rule = new karabiner.Ru
 function swapSemicolon(): karabiner.Rule = new karabiner.Rule {
   description = "Swap: semicolon ↔ colon"
   manipulators = List(
-    karabiner.map(keys.semicolon, new karabiner.ToEvent {
+    core.map(keys.semicolon, new karabiner.ToEvent {
       key_code = keys.semicolon
       modifiers = List(keys.left_shift)
     }),
-    karabiner.withMods(List(keys.left_shift), keys.semicolon, keys.semicolon)
+    core.withMods(List(keys.left_shift), keys.semicolon, keys.semicolon)
   )
 }
 
@@ -279,11 +280,11 @@ function swapGraveEscape(): karabiner.Rule =
 function swapBackslashPipe(): karabiner.Rule = new karabiner.Rule {
   description = "Swap: backslash ↔ pipe"
   manipulators = List(
-    karabiner.map(keys.backslash, new karabiner.ToEvent {
+    core.map(keys.backslash, new karabiner.ToEvent {
       key_code = keys.backslash
       modifiers = List(keys.left_shift)
     }),
-    karabiner.withMods(List(keys.left_shift), keys.backslash, keys.backslash)
+    core.withMods(List(keys.left_shift), keys.backslash, keys.backslash)
   )
 }
 
@@ -344,9 +345,9 @@ function swapCmdOpt(): karabiner.Rule =
 /// ## Returns
 /// A `karabiner.Rule` that creates the sticky modifier behavior.
 function stickyModifier(triggerKey: String, modifier: String): karabiner.Rule =
-  karabiner.rule(
+  core.rule(
     "Sticky \(modifier): \(triggerKey)",
-    karabiner.dualUse(triggerKey, modifier, triggerKey)
+    core.dualUse(triggerKey, modifier, triggerKey)
   )
 
 /// Creates a sticky shift modifier using the default left shift key.

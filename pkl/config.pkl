@@ -1,47 +1,48 @@
+open module config
 import "karabiner.pkl" as k
+import "core.pkl" as core
 import "keys.pkl" as keyDefs
 import "helpers.pkl" as h
 import "yabai.pkl" as y
-import "aerospace.pkl" as a
 import "builtins.pkl" as b
 import "actions.pkl" as ac
 
 karabiner = k
 keys = keyDefs
 helpers = h  
-yabai = y
-aerospace = a
+yabaiModule = y
 builtins = b
-actions = ac
+actions = import("actions.pkl")
+ccore = core
 
-typealias DualUse = k.DualUse
-typealias SimLayer = k.SimLayer
-typealias Layer = k.Layer
-typealias SpaceMode = k.SpaceMode
+typealias DualUse = core.DualUse
+typealias SimLayer = core.SimLayer
+typealias SpaceMode = core.SpaceMode
 typealias Rule = k.Rule
 typealias Yabai = y.Yabai
-typealias AeroSpace = a.AeroSpace
+typealias Keys = keyDefs.Keys
+typealias Actions = ac.Actions
 
-launchApp = ac.launchApp
+
+
+// keys = new keys {}
 
 
 name: String = "Default Profile"
 rules: List<Any> = List()  // Accepts Rules or constructor objects with .build property
-settings: k.ComplexModificationParameters?
+settings: k.ComplexModificationParameters = new k.ComplexModificationParameters {
+  `basic.simultaneous_threshold_milliseconds` = 200
+  `basic.to_delayed_action_delay_milliseconds` = 580
+  `basic.to_if_alone_timeout_milliseconds` = 1000
+  `basic.to_if_held_down_threshold_milliseconds` = 1000
+}
 yabai: y.Yabai = new y.Yabai {}
-aerospace: a.AeroSpace = new a.AeroSpace {}
 simpleModifications: List<k.SimpleModification> = List()
 devices: List<k.Device> = List()
 
-local function processRules(ruleList: List<Any>): List<k.Rule> =
-  ruleList.map((rule) ->
-    let (className = rule.getClass().toString())
-    if (className == "karabiner#DualUse" || className == "karabiner#SimLayer" || className == "karabiner#Layer")
-      rule.build()
-    else if (rule.hasProperty("build"))
-      rule.build
-    else
-      rule as k.Rule
+local function processRules(ruleList: List<Any>): List<Any> =
+  ruleList.flatMap((rule) ->
+    rule.build()
   ).toList()
 
 title: String = "Karabiner-Pkl Configuration"
@@ -50,15 +51,14 @@ profiles: List<k.Profile> =
   let (profileSettings = settings)  
   let (profileRules = rules)
   let (profileYabai = yabai)
-  let (profileAerospace = aerospace)
   let (profileSimpleModifications = simpleModifications)
   let (profileDevices = devices)
   List(new k.Profile {
     name = profileName
-    selected = true
+    virtual_hid_keyboard = new k.VirtualHidKeyboard {}
     complex_modifications = new k.ComplexModifications {
       parameters = profileSettings
-      rules = processRules(profileRules) + profileYabai.build + profileAerospace.build
+      rules = processRules(profileRules) + profileYabai.build 
     }
     simple_modifications = profileSimpleModifications
     devices = profileDevices

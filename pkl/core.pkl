@@ -1,0 +1,158 @@
+module core
+
+import "karabiner.pkl"
+import "keys.pkl"
+import "core_types.pkl" as types
+import "core.pkl"
+
+typealias Action = types.Action
+typealias UserInput = String | karabiner.Event
+
+
+class Mod {
+  mod: List<karabiner.Modifier> | karabiner.Modifier
+}
+
+open class BasicMap extends karabiner.Manipulator {
+  hidden mod: (List<karabiner.Modifier> | karabiner.Modifier)?
+  hidden key: UserInput
+  hidden action: Action?
+  hidden aloneAction: Action?
+  hidden description = ""
+  
+  from = if (key is String) new karabiner.FromEvent {
+    key_code = keys.validateKeyCode(key)
+    when (mod != null) {
+      modifiers = if (mod is List) mod else List(mod)
+    }
+  }
+  else key.as_input
+  
+  to = if (action == null) null else actionToEvents(action)
+  to_if_alone = if (aloneAction == null) null else actionToEvents(aloneAction)
+
+  function alone(action: Action) = (this) {to_if_alone = actionToEvents(action)}
+
+  function asRule(desc: String) = new karabiner.Rule {description = desc; manipulators = List(outer)}
+
+  function actionToEvents(action: Action): List<karabiner.ToEvent> = 
+  if (action is String) List(new karabiner.ToEvent { key_code = action })
+  else if (action is karabiner.Event) List(action.as_action)
+  else if (action is List) action.map((k) -> if (k is String) new karabiner.ToEvent { key_code = k } else k.as_action).toList()
+  else throw ("not found")
+
+  function build() = List(new karabiner.Rule {description = outer.description; manipulators = List(outer)})
+}
+
+open class DualUse extends BasicMap {
+  hidden tap: Action
+  hidden hold: karabiner.Event
+  aloneAction = hold.as_action
+  action = tap
+}
+
+function shell(cmd) = List(new karabiner.ToEvent {shell_command = cmd})
+
+
+
+function map(fromKey: String, toKey: Action): karabiner.Manipulator = new BasicMap {
+  key = fromKey
+  action = toKey
+}
+
+
+function dualUse(keyCode: String, holdAction: Action, tapAction: Action): karabiner.Manipulator = new BasicMap {
+  key = keyCode
+  action = holdAction
+  aloneAction = tapAction
+  from = new karabiner.FromEvent { 
+    key_code = keys.validateKeyCode(keyCode)
+    modifiers = new karabiner.Modifiers { optional = List("any") }
+  }
+}
+
+
+
+
+open class SimLayer extends types.BaseLayer  {
+
+    trigger: String
+    layerName: String = "\(trigger)-layer"
+    hidden maps: Mapping<String, karabiner.ToEvent> = new Mapping {}
+    
+    function build(): List<karabiner.Rule> = 
+      let (self = this)
+      let (actualMaps = if (!maps.isEmpty) maps.toMap() else self.getAllMappings().toMap().map((key, value) -> 
+        Pair(key, if (value is karabiner.ToEvent) value else if (value is String) new karabiner.ToEvent { key_code = value } else if (value is List) value.map((v) -> if (v is String) new karabiner.ToEvent { key_code = v } else v).first else value)
+      ))
+
+
+      let (conds = List(
+                                                      new karabiner.Condition {
+                                                        type = "variable_if"
+                                                        name = layerName
+                                                        value = 1
+                                                      }
+                                                    ))
+      let (part = actualMaps.entries.partition((el) -> el.value.hasMod))
+      let (withMods = part.first.map((entry) -> new BasicMap {key = entry.key; action = entry.value.as_action; conditions = conds}))
+      let (normal = part.second)
+      let ( modsRule = new karabiner.Rule { description = "Simultaneous \(trigger) layer with Mods"; manipulators = withMods})
+      List(new karabiner.Rule {
+      description = "Simultaneous \(trigger) layer"
+      manipulators =
+
+        actualMaps.entries.flatMap((entry) -> List(
+
+          new karabiner.Manipulator {
+            parameters = new karabiner.ManipulatorParameters {`basic.simultaneous_threshold_milliseconds` = 200}
+            from = new karabiner.FromEvent {
+              simultaneous = List(
+                new karabiner.FromEvent { key_code = trigger },
+                new karabiner.FromEvent { key_code = entry.key }
+              )
+              simultaneous_options = new karabiner.SimultaneousOptions {
+                detect_key_down_uninterruptedly = false
+                key_down_order = "strict"
+                key_up_order = "strict_inverse"
+                key_up_when = "any"
+                to_after_key_up = List(
+                  new karabiner.ToEvent {
+                    set_variable = new karabiner.SetVariable {
+                      name = layerName
+                      value = 0
+                    }
+                  }
+                )
+              }
+            }
+            to = List(
+              new karabiner.ToEvent {
+                set_variable = new karabiner.SetVariable {
+                  name = layerName
+                  value = 1 }
+              }
+            ) + List(entry.value.as_action)
+          },
+
+          new karabiner.Manipulator {
+            from = new karabiner.FromEvent {
+              key_code = entry.key
+            }
+            conditions = List(
+              new karabiner.Condition {
+                type = "variable_if"
+                name = layerName
+                value = 1
+              }
+            )
+            to = List(entry.value.as_action)
+          }
+        )).toList()
+    })
+  }
+
+class SpaceMode extends SimLayer {
+  trigger = keys.space
+}
+

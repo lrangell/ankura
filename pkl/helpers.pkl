@@ -1,6 +1,7 @@
 module helpers
 
 import "karabiner.pkl"
+import "core.pkl"
 import "keys.pkl"
 
 
@@ -12,7 +13,7 @@ function vimNavigation(): karabiner.Rule =
   vimNavigationLayer(keys.left_control)
 
 function vimNavigationLayer(modifierKey: String): karabiner.Rule = 
-  karabiner.layer(modifierKey, karabiner.mapping(new Mapping {
+  core.layer(modifierKey, core.mapping(new Mapping {
     ["h"] = keys.left_arrow
     ["j"] = keys.down_arrow
     ["k"] = keys.up_arrow
@@ -28,12 +29,12 @@ function vimNavigationLayer(modifierKey: String): karabiner.Rule =
 
 
 function launchApp(key: String, app: String): karabiner.Manipulator = 
-  karabiner.map(key, new karabiner.ToEvent {
+  core.map(key, new karabiner.ToEvent {
     shell_command = "open -a '\(app)'"
   })
 
 function launchAppMods(key: String, app: String, modifiers: List<String>): karabiner.Manipulator = 
-  karabiner.withMods(modifiers, key, new karabiner.ToEvent {
+  core.withMods(modifiers, key, new karabiner.ToEvent {
     shell_command = "open -a '\(app)'"
   })
 
@@ -54,39 +55,39 @@ function launchAppMods(key: String, app: String, modifiers: List<String>): karab
 
 
 function capsToEsc(): karabiner.Rule = 
-  karabiner.rule("Caps Lock to Escape", karabiner.map(keys.caps_lock, keys.escape))
+  core.rule("Caps Lock to Escape", core.map(keys.caps_lock, keys.escape))
 
 function capsToCtrl(): karabiner.Rule = 
-  karabiner.rule("Caps Lock to Control", karabiner.map(keys.caps_lock, keys.left_control))
+  core.rule("Caps Lock to Control", core.map(keys.caps_lock, keys.left_control))
 
 function capsToCtrlEsc(): karabiner.Rule = 
-  karabiner.rule(
+  core.rule(
     "Caps Lock to Control when held, Escape when alone",
-    karabiner.dualUse(keys.caps_lock, keys.left_control, keys.escape)
+    core.dualUse(keys.caps_lock, keys.left_control, keys.escape)
   )
 
 function spaceToCmd(): karabiner.Rule = 
-  karabiner.rule(
+  core.rule(
     "Spacebar to Command when held, Space when alone",
-    karabiner.dualUse(keys.spacebar, keys.left_command, keys.spacebar)
+    core.dualUse(keys.spacebar, keys.left_command, keys.spacebar)
   )
 
 function spaceToOpt(): karabiner.Rule = 
-  karabiner.rule(
+  core.rule(
     "Spacebar to Option when held, Space when alone",
-    karabiner.dualUse(keys.spacebar, keys.left_option, keys.spacebar)
+    core.dualUse(keys.spacebar, keys.left_option, keys.spacebar)
   )
 
 function spaceToCtrl(): karabiner.Rule = 
-  karabiner.rule(
+  core.rule(
     "Spacebar to Control when held, Space when alone",
-    karabiner.dualUse(keys.spacebar, keys.left_control, keys.spacebar)
+    core.dualUse(keys.spacebar, keys.left_control, keys.spacebar)
   )
 
 function cmdToRecent(): karabiner.Rule = 
-  karabiner.rule(
+  core.rule(
     "Command to recent space when alone",
-    karabiner.dualUse(keys.left_command, keys.left_command, new karabiner.ToEvent {
+    core.dualUse(keys.left_command, keys.left_command, new karabiner.ToEvent {
       key_code = keys.tab
       modifiers = List(keys.left_command)
     })

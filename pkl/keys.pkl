@@ -1,4 +1,6 @@
+
 module keys
+import "karabiner.pkl"
 
 a = "a"
 b = "b"
@@ -130,7 +132,7 @@ volume_up = "volume_increment"
 volume_down = "volume_decrement"
 mute = "mute"
 
-const allKeys: List<String> = List(
+allKeys: List<String> = List(
   "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m",
   "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z",
   "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
@@ -138,7 +140,7 @@ const allKeys: List<String> = List(
   "close_bracket", "hyphen", "equal_sign", "grave_accent_and_tilde", "backslash"
 )
 
-const validKeyCodes: Set<String> = Set(
+validKeyCodes: Set<String> = Set(
   "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m",
   "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z",
   
@@ -188,6 +190,160 @@ const validKeyCodes: Set<String> = Set(
   
   "play_or_pause", "volume_increment", "volume_decrement"
 )
+
+
+
+
+
+
+class Modifiers {
+  leftCommand = "left_command"
+  leftControl = "left_control"
+  leftOption = "left_option"
+  leftShift = "left_shift"
+  rightCommand = "right_command"
+  rightControl = "right_control"
+  rightOption = "right_option"
+  rightShift = "right_shift"
+  cmd = "left_command"
+  ctrl = "left_control"
+  control = "left_control"
+  opt = "left_option"
+  option = "left_option"
+  shift = "left_shift"
+}
+
+class Keys {
+  a = "a"
+  b = "b"
+  c = "c"
+  d = "d"
+  e = "e"
+  f = "f"
+  g = "g"
+  h = "h"
+  i = "i"
+  j = "j"
+  k = "k"
+  l = "l"
+  m = "m"
+  n = "n"
+  o = "o"
+  p = "p"
+  q = "q"
+  r = "r"
+  s = "s"
+  t = "t"
+  u = "u"
+  v = "v"
+  w = "w"
+  x = "x"
+  y = "y"
+  z: "z"
+
+  zero = "0"
+  one = "1"
+  two = "2"
+  three = "3"
+  four = "4"
+  five = "5"
+  six = "6"
+  seven = "7"
+  eight = "8"
+  nine = "9"
+
+  num0 = "0"
+  num1 = "1"
+  num2 = "2"
+  num3 = "3"
+  num4 = "4"
+  num5 = "5"
+  num6 = "6"
+  num7 = "7"
+  num8 = "8"
+  num9 = "9"
+
+  spacebar = "spacebar"
+  space = "spacebar"
+  tab = "tab"
+  escape = new karabiner.Event { key_code = "escape" }
+  esc = new karabiner.Event { key_code = "escape" }
+  enter = "return_or_enter"
+  returnOrEnter = "return_or_enter"
+  del = "delete_or_backspace"
+  deleteOrBackspace = "delete_or_backspace"
+  backspace = "delete_or_backspace"
+  deleteForward = "delete_forward"
+
+  leftArrow = "left_arrow"
+  rightArrow = "right_arrow"
+  upArrow = "up_arrow"
+  downArrow = "down_arrow"
+  left = new karabiner.Event { key_code = "left_arrow" }
+  right = new karabiner.Event { key_code = "right_arrow" }
+  up = "up_arrow"
+  down = "down_arrow"
+
+  leftCommand = new karabiner.Event { key_code = "left_command" }
+  leftControl = "left_control"
+  leftOption = "left_option"
+  leftShift = "left_shift"
+  rightCommand = "right_command"
+  rightControl = "right_control"
+  rightOption = "right_option"
+  rightShift = "right_shift"
+  cmd = new karabiner.Event { key_code = "left_command" }
+  ctrl = new karabiner.Event { key_code = "left_control" }
+  control = "left_control"
+  opt = new karabiner.Event { key_code = "left_option" }
+  option = new karabiner.Event { key_code = "left_option" }
+  shift = "left_shift"
+  fn = "fn"
+
+  f1 = "f1"
+  f2 = "f2"
+  f3 = "f3"
+  f4 = "f4"
+  f5 = "f5"
+  f6 = "f6"
+  f7 = new karabiner.Event { key_code = "f7" }
+  f8 = "f8"
+  f9 = "f9"
+  f10 = "f10"
+  f11 = "f11"
+  f12 = "f12"
+
+  semicolon = "semicolon"
+  comma = new karabiner.Event { key_code = "comma" }
+  period = new karabiner.Event { key_code = "period" }
+  slash = "slash"
+  backslash = "backslash"
+  quote = "quote"
+  graveAccentAndTilde = "grave_accent_and_tilde"
+  grave = "grave_accent_and_tilde"
+  hyphen = "hyphen"
+  equalSign = "equal_sign"
+  equal = "equal_sign"
+  openBracket = "open_bracket"
+  closeBracket = "close_bracket"
+
+  pageUp = "page_up"
+  pageDown = "page_down"
+  home = "home"
+  end = "end"
+
+  capsLock = new karabiner.Event { key_code = "caps_lock" }
+  caps = new karabiner.Event { key_code = "caps_lock" }
+
+  playOrPause = "play_or_pause"
+  playPause = "play_or_pause"
+  play = "play_or_pause"
+  volumeIncrement = "volume_increment"
+  volumeDecrement = "volume_decrement"
+  volumeUp = "volume_increment"
+  volumeDown = "volume_decrement"
+  mute = "mute"
+}
 
 function validateKeyCode(key: String): String = 
   if (!validKeyCodes.contains(key)) 

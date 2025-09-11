@@ -2,81 +2,137 @@ module actions
 
 import "karabiner.pkl"
 
-function launchApp(appName: String): karabiner.ToEvent = new karabiner.ToEvent {
-  shell_command = "open -a \"\(appName)\""
+class Actions {
+  function launchApp(appName: String): karabiner.ToEvent = new karabiner.ToEvent {
+    shell_command = "open -a \"\(appName)\""
+  }
+  
+  function focusOrLaunchApp(appName: String): karabiner.ToEvent = new karabiner.ToEvent {
+    shell_command = "osascript -e 'tell application \"\(appName)\" to activate' || open -a \"\(appName)\""
+  }
+  
+  function closeWindow(): karabiner.ToEvent = new karabiner.ToEvent {
+    key_code = "w"
+    modifiers = List("command")
+  }
+  
+  function closeApp(): karabiner.ToEvent = new karabiner.ToEvent {
+    key_code = "q"
+    modifiers = List("command")
+  }
+  
+  function runShell(command: String): karabiner.ToEvent = new karabiner.ToEvent {
+    shell_command = command
+  }
+  
+  function runBin(binPath: String, args: List<String>): karabiner.ToEvent = new karabiner.ToEvent {
+    shell_command = "\(binPath)\(if (args.isEmpty) "" else " " + args.map((arg) -> "\"\(arg)\"").join(" "))"
+  }
+  
+  function openUrl(url: String): karabiner.ToEvent = new karabiner.ToEvent {
+    shell_command = "open \"\(url)\""
+  }
+  
+  function openPath(path: String): karabiner.ToEvent = new karabiner.ToEvent {
+    shell_command = "open \"\(path)\""
+  }
+  
+  function typeText(text: String): karabiner.ToEvent = new karabiner.ToEvent {
+    shell_command = "osascript -e 'tell application \"System Events\" to keystroke \"\(text)\" as text'"
+  }
+  
+  function showNotification(title: String, message: String): karabiner.ToEvent = new karabiner.ToEvent {
+    shell_command = "osascript -e 'display notification \"\(message)\" with title \"\(title)\"'"
+  }
+  
+  function lockScreen(): karabiner.ToEvent = new karabiner.ToEvent {
+    shell_command = "pmset displaysleepnow"
+  }
+  
+  function sleep(): karabiner.ToEvent = new karabiner.ToEvent {
+    shell_command = "pmset sleepnow"
+  }
+  
+  function restart(): karabiner.ToEvent = new karabiner.ToEvent {
+    shell_command = "sudo reboot"
+  }
+  
+  function shutdown(): karabiner.ToEvent = new karabiner.ToEvent {
+    shell_command = "sudo shutdown -h now"
+  }
+  
+  function volumeUp(): karabiner.ToEvent = new karabiner.ToEvent {
+    shell_command = "osascript -e 'set volume output volume (output volume of (get volume settings) + 10)'"
+  }
+  
+  function volumeDown(): karabiner.ToEvent = new karabiner.ToEvent {
+    shell_command = "osascript -e 'set volume output volume (output volume of (get volume settings) - 10)'"
+  }
+  
+  function mute(): karabiner.ToEvent = new karabiner.ToEvent {
+    shell_command = "osascript -e 'set volume output muted not (output muted of (get volume settings))'"
+  }
+  
+  function brightnessUp(): karabiner.ToEvent = new karabiner.ToEvent {
+    shell_command = "osascript -e 'tell application \"System Events\" to key code 144'"
+  }
+  
+  function brightnessDown(): karabiner.ToEvent = new karabiner.ToEvent {
+    shell_command = "osascript -e 'tell application \"System Events\" to key code 145'"
+  }
+  
+  function screenshot(): karabiner.ToEvent = new karabiner.ToEvent {
+    shell_command = "screencapture -c"
+  }
+  
+  function screenshotSelection(): karabiner.ToEvent = new karabiner.ToEvent {
+    shell_command = "screencapture -c -s"
+  }
+  
+  function screenshotWindow(): karabiner.ToEvent = new karabiner.ToEvent {
+    shell_command = "screencapture -c -w"
+  }
+  
+  function copyToClipboard(text: String): karabiner.ToEvent = new karabiner.ToEvent {
+    shell_command = "echo \"\(text)\" | pbcopy"
+  }
+  
+  function pasteFromClipboard(): karabiner.ToEvent = new karabiner.ToEvent {
+    shell_command = "pbpaste"
+  }
+  
+  function missionControl(): karabiner.ToEvent = new karabiner.ToEvent {
+    key_code = "up_arrow"
+    modifiers = List("control")
+  }
+  
+  function showDesktop(): karabiner.ToEvent = new karabiner.ToEvent {
+    key_code = "f11"
+  }
+  
+  function showLaunchpad(): karabiner.ToEvent = new karabiner.ToEvent {
+    shell_command = "open -a Launchpad"
+  }
+  
+  function switchToSpace(spaceNumber: Int): karabiner.ToEvent = new karabiner.ToEvent {
+    key_code = spaceNumber.toString()
+    modifiers = List("control")
+  }
+  
+  function toggleDoNotDisturb(): karabiner.ToEvent = new karabiner.ToEvent {
+    shell_command = """
+      osascript -e '
+      tell application "System Events"
+        option key down
+        click menu bar item 1 of menu bar 1 of application process "ControlCenter"
+        option key up
+      end tell'
+      """.replaceAll("\n", "")
+  }
+  
+  function openActivityMonitor(): karabiner.ToEvent = new karabiner.ToEvent {
+    shell_command = "open -a 'Activity Monitor'"
+  }
 }
 
-function runShell(command: String): karabiner.ToEvent = new karabiner.ToEvent {
-  shell_command = command
-}
-
-function runBin(binPath: String, args: List<String> = List()): karabiner.ToEvent = new karabiner.ToEvent {
-  shell_command = "\(binPath)\(if (args.isEmpty) "" else " " + args.map((arg) -> "\"\(arg)\"").join(" "))"
-}
-
-function focusOrLaunchApp(appName: String): karabiner.ToEvent = new karabiner.ToEvent {
-  shell_command = "osascript -e 'tell application \"\(appName)\" to activate' || open -a \"\(appName)\""
-}
-
-function openUrl(url: String): karabiner.ToEvent = new karabiner.ToEvent {
-  shell_command = "open \"\(url)\""
-}
-
-function openPath(path: String): karabiner.ToEvent = new karabiner.ToEvent {
-  shell_command = "open \"\(path)\""
-}
-
-function typeText(text: String): karabiner.ToEvent = new karabiner.ToEvent {
-  shell_command = "osascript -e 'tell application \"System Events\" to keystroke \"\(text)\" as text'"
-}
-
-function showNotification(title: String, message: String = ""): karabiner.ToEvent = new karabiner.ToEvent {
-  shell_command = "osascript -e 'display notification \"\(message)\" with title \"\(title)\"'"
-}
-
-function lockScreen(): karabiner.ToEvent = new karabiner.ToEvent {
-  shell_command = "pmset displaysleepnow"
-}
-
-function sleep(): karabiner.ToEvent = new karabiner.ToEvent {
-  shell_command = "pmset sleepnow"
-}
-
-function restart(): karabiner.ToEvent = new karabiner.ToEvent {
-  shell_command = "sudo reboot"
-}
-
-function shutdown(): karabiner.ToEvent = new karabiner.ToEvent {
-  shell_command = "sudo shutdown -h now"
-}
-
-function volumeUp(): karabiner.ToEvent = new karabiner.ToEvent {
-  shell_command = "osascript -e 'set volume output volume (output volume of (get volume settings) + 10)'"
-}
-
-function volumeDown(): karabiner.ToEvent = new karabiner.ToEvent {
-  shell_command = "osascript -e 'set volume output volume (output volume of (get volume settings) - 10)'"
-}
-
-function mute(): karabiner.ToEvent = new karabiner.ToEvent {
-  shell_command = "osascript -e 'set volume output muted not (output muted of (get volume settings))'"
-}
-
-function brightnessUp(): karabiner.ToEvent = new karabiner.ToEvent {
-  shell_command = "osascript -e 'tell application \"System Events\" to key code 144'"
-}
-
-function brightnessDown(): karabiner.ToEvent = new karabiner.ToEvent {
-  shell_command = "osascript -e 'tell application \"System Events\" to key code 145'"
-}
-
-
-
-
-
-function screenshot(): karabiner.ToEvent = runShell("screencapture -c")
-function screenshotSelection(): karabiner.ToEvent = runShell("screencapture -c -s")
-function screenshotWindow(): karabiner.ToEvent = runShell("screencapture -c -w")
-
-function copyToClipboard(text: String): karabiner.ToEvent = runShell("echo \"\(text)\" | pbcopy")
-function pasteFromClipboard(): karabiner.ToEvent = runShell("pbpaste")
+actions = new Actions {}

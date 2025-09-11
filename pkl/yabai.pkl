@@ -1,8 +1,8 @@
 module yabai
 
 import "karabiner.pkl"
+import "core.pkl"
 
-typealias ModifierInput = String|List<String>
 
 cmdPath = "/opt/homebrew/bin/yabai"
 
@@ -16,9 +16,9 @@ open class YabaiMode {
   ignore = List("manipulators", "defined", "rules", "modifier", "mod", "action_cmd", "actions", "cmdPath", "ignore", "mappings")
   // mod: List<String?>? | String?  | Dynamic = trace(modifier) ?? trace(super.mod)
 
-  function manipulators() = defined().entries.toMap((entry) -> entry.value, (entry) -> karabiner.shell("\(cmdPath) \(action_cmd) \(entry.key)").single)
+  function manipulators() = defined().entries.toMap((entry) -> entry.value, (entry) -> core.shell("\(cmdPath) \(action_cmd) \(entry.key)").single)
   function defined() = toMap().filter((key, val) -> !(ignore.contains(key) || val is Null)) + this.mappings.toMap()
-  function rules() = if (manipulators().isEmpty) null else new karabiner.SimLayer {trigger = modifier; maps = manipulators().toMapping()}.build()
+  function rules() = if (manipulators().isEmpty) null else new core.SimLayer {trigger = modifier; maps = manipulators().toMapping()}.build().last
 }
 
 open class Sequential extends YabaiMode {
@@ -121,7 +121,7 @@ class StackSwap extends Sequential {
 
 
 open class YabaiFeature {
-  modifier: ModifierInput?
+  modifier: (String|List<String>)?
   function rules() = toMap().fold(List(), (acc, k, v) -> if (k == "modifier" ||  v?.rules() is Null) acc else acc.add(v.rules()))
 }
 
