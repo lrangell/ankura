@@ -8,6 +8,8 @@ use std::process::Command;
 use tracing::info;
 use which::which;
 
+const ANKURA_LIB_DIR: &str = "/opt/homebrew/var/lib/ankura";
+
 #[derive(RustEmbed)]
 #[folder = "pkl/"]
 #[include = "*.pkl"]
@@ -180,8 +182,13 @@ impl Compiler {
         None
     }
 
-    fn materialize_pkl_lib() -> Result<PathBuf> {
-        let data_dir = PathBuf::from("/opt/homebrew/share/ankura");
+    pub fn materialize_pkl_lib() -> Result<PathBuf> {
+        let data_dir = PathBuf::from(ANKURA_LIB_DIR);
+
+        info!(
+            "Attempting to materialize pkl files to {}",
+            data_dir.display()
+        );
 
         std::fs::create_dir_all(&data_dir).map_err(|e| KarabinerPklError::DaemonError {
             message: format!("Failed to create data directory: {e}"),
@@ -239,5 +246,9 @@ impl Compiler {
         }
 
         hasher.finish()
+    }
+
+    pub fn lib_dir() -> PathBuf {
+        PathBuf::from(ANKURA_LIB_DIR)
     }
 }

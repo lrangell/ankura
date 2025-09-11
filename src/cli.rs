@@ -173,45 +173,30 @@ pub async fn show_status() -> Result<()> {
 }
 
 pub async fn init_config(config_path: PathBuf, force: bool) -> Result<()> {
+    let data_dir = crate::compiler::Compiler::lib_dir();
+
+    std::fs::create_dir_all(&data_dir).map_err(|e| KarabinerPklError::DaemonError {
+        message: format!("Failed to create lib directory {}: {e}", data_dir.display()),
+    })?;
+
+    let _extracted_dir = crate::compiler::Compiler::materialize_pkl_lib()?;
+
+    println!("✅ Pkl library files ready at {}", data_dir.display());
+
     if config_path.exists() && !force {
         println!("Configuration already exists at {}", config_path.display());
         println!("Use --force to overwrite");
         return Ok(());
     }
 
-    let _compiler = crate::compiler::Compiler::new()?;
-
-    let data_dir = std::path::PathBuf::from("/opt/homebrew/share/ankura");
-
-    println!("✅ Pkl library files ready at {}", data_dir.display());
-
-    let example_config = format!(
-        r#"// Simple Karabiner configuration with unified userconfig
-amends "{}/config.pkl"
-
-name = "My Karabiner Config"
-
-rules = List(
-    new DualUse {{
-        key = outer.keys.caps_lock
-        tap = outer.keys.escape
-        hold = outer.keys.left_control
-    }},
-    
-    new SimLayer {{
-        trigger = outer.keys.f
-        h = outer.keys.left_arrow    // h -> Left
-        j = outer.keys.down_arrow    // j -> Down  
-        u = outer.keys.up_arrow      // u -> Up
-        l = outer.keys.right_arrow   // l -> Right
-    }}
-)
-"#,
-        data_dir.display()
-    );
-
-    let pkl_project = r#"amends "pkl:Project"
-"#;
+    // Read the blank config template
+    let blank_config_path = PathBuf::from("pkl/blank_config.pkl");
+    let example_config = std::fs::read_to_string(&blank_config_path).map_err(|e| {
+        KarabinerPklError::ConfigReadError {
+            path: blank_config_path.clone(),
+            source: e,
+        }
+    })?;
 
     if let Some(parent) = config_path.parent() {
         std::fs::create_dir_all(parent).map_err(|e| KarabinerPklError::ConfigWriteError {
@@ -226,17 +211,6 @@ rules = List(
             source: e,
         }
     })?;
-
-    if let Some(parent) = config_path.parent() {
-        let pkl_project_path = parent.join("PklProject");
-        std::fs::write(&pkl_project_path, pkl_project).map_err(|e| {
-            KarabinerPklError::ConfigWriteError {
-                path: pkl_project_path.clone(),
-                source: e,
-            }
-        })?;
-        println!("Created PklProject file at {}", pkl_project_path.display());
-    }
 
     println!("Created example configuration at {}", config_path.display());
     println!("Edit this file and run 'ankura compile' to apply changes");
@@ -290,9 +264,7 @@ pub fn merge_configurations(existing_path: &Path, new_config: Value) -> Result<V
     if let Some(index) = existing_profile_index {
         profiles[index] = new_profile;
     } else {
-        let mut profile_to_add = new_profile;
-        profile_to_add["selected"] = serde_json::json!(false);
-        profiles.push(profile_to_add);
+        profiles.push(new_profile);
     }
 
     if existing_config.get("title").is_none() {
