@@ -156,3 +156,9 @@ class SpaceMode extends SimLayer {
   trigger = keys.space
 }
 
+open class Layer extends types.BaseLayer  {
+    hidden modifier: (List<karabiner.Modifier> | karabiner.Modifier)?
+    hidden ruleFromEntry = (entry) -> new BasicMap {mod = modifier; key = entry.key; action = entry.value;}.build()
+    function build() = getAllMappings().toMap().entries.flatMap(ruleFromEntry)
+
+}
