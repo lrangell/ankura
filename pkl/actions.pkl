@@ -33,16 +33,13 @@ class Actions {
     shell_command = "open \"\(url)\""
   }
   
-  function openPath(path: String): karabiner.ToEvent = new karabiner.ToEvent {
-    shell_command = "open \"\(path)\""
-  }
   
   function typeText(text: String): karabiner.ToEvent = new karabiner.ToEvent {
     shell_command = "osascript -e 'tell application \"System Events\" to keystroke \"\(text)\" as text'"
   }
   
   function showNotification(title: String, message: String): karabiner.ToEvent = new karabiner.ToEvent {
-    shell_command = "osascript -e 'display notification \"\(message)\" with title \"\(title)\"'"
+    shell_command = "osascript -e 'display notification \"\(message)\" with title \"\(title)\""
   }
   
   function lockScreen(): karabiner.ToEvent = new karabiner.ToEvent {
@@ -53,9 +50,6 @@ class Actions {
     shell_command = "pmset sleepnow"
   }
   
-  function restart(): karabiner.ToEvent = new karabiner.ToEvent {
-    shell_command = "sudo reboot"
-  }
   
   function shutdown(): karabiner.ToEvent = new karabiner.ToEvent {
     shell_command = "sudo shutdown -h now"
@@ -93,42 +87,11 @@ class Actions {
     shell_command = "screencapture -c -w"
   }
   
-  function copyToClipboard(text: String): karabiner.ToEvent = new karabiner.ToEvent {
-    shell_command = "echo \"\(text)\" | pbcopy"
-  }
-  
-  function pasteFromClipboard(): karabiner.ToEvent = new karabiner.ToEvent {
-    shell_command = "pbpaste"
-  }
-  
-  function missionControl(): karabiner.ToEvent = new karabiner.ToEvent {
-    key_code = "up_arrow"
-    modifiers = List("control")
-  }
-  
-  function showDesktop(): karabiner.ToEvent = new karabiner.ToEvent {
-    key_code = "f11"
-  }
   
   function showLaunchpad(): karabiner.ToEvent = new karabiner.ToEvent {
     shell_command = "open -a Launchpad"
   }
   
-  function switchToSpace(spaceNumber: Int): karabiner.ToEvent = new karabiner.ToEvent {
-    key_code = spaceNumber.toString()
-    modifiers = List("control")
-  }
-  
-  function toggleDoNotDisturb(): karabiner.ToEvent = new karabiner.ToEvent {
-    shell_command = """
-      osascript -e '
-      tell application "System Events"
-        option key down
-        click menu bar item 1 of menu bar 1 of application process "ControlCenter"
-        option key up
-      end tell'
-      """.replaceAll("\n", "")
-  }
   
   function openActivityMonitor(): karabiner.ToEvent = new karabiner.ToEvent {
     shell_command = "open -a 'Activity Monitor'"

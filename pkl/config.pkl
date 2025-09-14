@@ -4,6 +4,7 @@ import "core.pkl" as core
 import "keys.pkl" as keyDefs
 import "helpers.pkl" as h
 import "yabai.pkl" as y
+import "aerospace.pkl" as a
 import "builtins.pkl" as b
 import "actions.pkl" as ac
 
@@ -11,16 +12,20 @@ karabiner = k
 keys = keyDefs
 helpers = h  
 yabaiModule = y
+aerospaceModule = a
 builtins = b
 actions = import("actions.pkl")
 ccore = core
 
 typealias DualUse = core.DualUse
 typealias SimLayer = core.SimLayer
+typealias Layer = core.Layer
 typealias SpaceMode = core.SpaceMode
 typealias Rule = k.Rule
 typealias Yabai = y.Yabai
+typealias AeroSpace = a.AeroSpace
 typealias Keys = keyDefs.Keys
+typealias Modifiers = keyDefs.Modifiers
 typealias Actions = ac.Actions
 
 
@@ -37,6 +42,7 @@ settings: k.ComplexModificationParameters = new k.ComplexModificationParameters 
   `basic.to_if_held_down_threshold_milliseconds` = 1000
 }
 yabai: y.Yabai = new y.Yabai {}
+aerospace: a.AeroSpace = new a.AeroSpace {}
 simpleModifications: List<k.SimpleModification> = List()
 devices: List<k.Device> = List()
 
@@ -51,6 +57,7 @@ profiles: List<k.Profile> =
   let (profileSettings = settings)  
   let (profileRules = rules)
   let (profileYabai = yabai)
+  let (profileAerospace = aerospace)
   let (profileSimpleModifications = simpleModifications)
   let (profileDevices = devices)
   List(new k.Profile {
@@ -58,7 +65,7 @@ profiles: List<k.Profile> =
     virtual_hid_keyboard = new k.VirtualHidKeyboard {}
     complex_modifications = new k.ComplexModifications {
       parameters = profileSettings
-      rules = processRules(profileRules) + profileYabai.build 
+      rules = processRules(profileRules) + profileYabai.build + profileAerospace.build
     }
     simple_modifications = profileSimpleModifications
     devices = profileDevices

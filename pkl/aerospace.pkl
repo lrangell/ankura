@@ -1,984 +1,175 @@
-/// AeroSpace window manager integration for Karabiner-Elements
-///
-/// This module provides a declarative API for configuring [AeroSpace](https://nikitabobko.github.io/AeroSpace/)
-/// window management through Karabiner-Elements keyboard shortcuts. AeroSpace is an i3-like tiling window
-/// manager for macOS that provides advanced window manipulation capabilities.
-///
-/// ## Basic Usage
-///
-/// ```pkl
-/// aerospace = new aerospace.AeroSpace {
-///   window = new aerospace.Window {
-///     modifier = "left_alt"
-///     focus = new aerospace.WindowFocus {
-///       left = "h"
-///       down = "j" 
-///       up = "k"
-///       right = "l"
-///     }
-///   }
-/// }
-/// 
-/// rules = aerospace.build
-/// ```
-///
-/// ## Advanced Features
-///
-/// AeroSpace provides unique capabilities beyond traditional window managers:
-/// - **Mode system**: Context-specific key bindings (like vim modes)
-/// - **Window joining**: Advanced container manipulation
-/// - **Tree operations**: Workspace layout management
-/// - **Native macOS integration**: Built-in minimize/fullscreen support
-/// - **App launching**: Integrated application launcher
-///
-/// ## Modifier Inheritance
-///
-/// Modifiers can be set at the parent level and inherited by child operations:
-///
-/// ```pkl
-/// window = new aerospace.Window {
-///   modifier = "left_alt"  // Base modifier
-///   focus = new aerospace.WindowFocus {
-///     // Inherits left_alt from parent
-///     left = "h"
-///   }
-///   move = new aerospace.WindowMove {
-///     modifier = List("left_alt", "left_shift")  // Override with alt+shift
-///     left = "h"
-///   }
-/// }
-/// ```
 module aerospace
 
 import "karabiner.pkl"
+import "core.pkl"
 
-/// Type alias for modifier input - accepts single string or list of modifier keys
-typealias ModifierInput = String|List<String>
+cmdPath = "/opt/homebrew/bin/aerospace"
 
-/// Converts modifier input to a list of strings for internal processing
-const function toModifierList(input: ModifierInput?): List<String>? =
-  if (input == null) null
-  else if (input is String) List(input)
-  else input
+open class AerospaceMode {
+  cmdPath = "/opt/homebrew/bin/aerospace"
+  modifier: List<karabiner.Modifier> | karabiner.Modifier | String
+  mappings: Mapping<String, String> = new Mapping {}
+  action_cmd: String
+  ignore = List("manipulators", "defined", "rules", "modifier", "action_cmd", "cmdPath", "ignore", "mappings", "focusShouldFollow")
 
-/// Window focus operations for directional and sequential navigation
-///
-/// Supports both directional movement (left/right/up/down) and AeroSpace-specific
-/// depth-first search navigation for complex window hierarchies.
-class WindowFocus {
-  /// Optional modifier override for focus operations
-  modifier: ModifierInput?
-  
-  /// Focus window to the left
+  function manipulators() = defined().entries.toMap((entry) -> entry.value, (entry) -> core.shell("\(cmdPath) \(action_cmd) \(entry.key)").single)
+  function defined() = toMap().filter((key, val) -> !(ignore.contains(key) || val is Null)) + this.mappings.toMap()
+  function rules() = if (manipulators().isEmpty) null else new core.SimLayer {trigger = modifier; maps = manipulators().toMapping()}.build().last
+}
+
+open class Sequential extends AerospaceMode {
+  prev: String?
+  next: String?
+  first: String?
+  last: String?
+}
+
+open class Directional extends AerospaceMode {
   left: String?
-  /// Focus window below
   down: String?
-  /// Focus window above  
   up: String?
-  /// Focus window to the right
   right: String?
-  /// Focus next window using depth-first search
+  prev: String?
+  next: String?
+}
+
+class WindowFocus extends Directional {
+  action_cmd = "focus"
   dfsNext: String?
-  /// Focus previous window using depth-first search
   dfsPrev: String?
 }
 
-/// Window movement operations for repositioning windows within workspace
-class WindowMove {
-  /// Optional modifier override for move operations
-  modifier: ModifierInput?
-  
-  /// Move window to the left
-  left: String?
-  /// Move window down
-  down: String?
-  /// Move window up
-  up: String?
-  /// Move window to the right
-  right: String?
+class WindowMove extends Directional {
+  action_cmd = "move"
 }
 
-/// Window resizing operations with multiple resize modes
-///
-/// AeroSpace provides flexible resizing including smart resize modes that
-/// automatically determine the appropriate resize direction.
-class WindowResize {
-  /// Optional modifier override for resize operations  
-  modifier: ModifierInput?
-  
-  /// Resize window width (positive = wider, negative = narrower)
+class WindowResize extends AerospaceMode {
+  action_cmd = "resize"
   width: String?
-  /// Resize window height (positive = taller, negative = shorter)
   height: String?
-  /// Smart resize - automatically determines best resize direction
   smart: String?
-  /// Smart resize in opposite direction
   smartOpposite: String?
-  /// Default resize amount in pixels
   amount: Int = 100
 }
 
-/// Window layout operations for changing tiling behavior
-///
-/// Controls how windows are arranged within a workspace, including
-/// tiling modes and fullscreen operations.
-class WindowLayout {
-  /// Optional modifier override for layout operations
-  modifier: ModifierInput?
-  
-  /// Switch to tiling layout mode
+class WindowLayout extends AerospaceMode {
+  action_cmd = "layout"
   tiling: String?
-  /// Switch to floating layout mode  
   floating: String?
-  /// Arrange windows in horizontal tiles
   hTiles: String?
-  /// Arrange windows in vertical tiles
   vTiles: String?
-  /// Toggle fullscreen mode
   fullscreen: String?
 }
 
-/// Window join operations for container manipulation
-///
-/// AeroSpace's unique feature for putting windows under common parent containers,
-/// providing more flexible layout control than traditional tiling managers.
-class WindowJoin {
-  /// Optional modifier override for join operations
-  modifier: ModifierInput?
-  
-  /// Join with window to the left
-  left: String?
-  /// Join with window below
-  down: String?
-  /// Join with window above
-  up: String?
-  /// Join with window to the right
-  right: String?
+class WindowJoin extends Directional {
+  action_cmd = "join-with"
 }
 
-/// Window close operations
-///
-/// Provides keyboard shortcuts for closing windows with various strategies.
-class WindowClose {
-  /// Optional modifier override for close operations
-  modifier: ModifierInput?
-  
-  /// Close current window
+class WindowClose extends AerospaceMode {
+  action_cmd = "close"
   current: String?
-  /// Close all windows except the current one
   allButCurrent: String?
 }
 
-/// Native macOS window operations
-///
-/// Integrates with macOS native window management features like minimize
-/// and native fullscreen mode (separate from AeroSpace fullscreen).
-class WindowNative {
-  /// Optional modifier override for native operations
-  modifier: ModifierInput?
-  
-  /// Minimize window using macOS native minimize
+class WindowNative extends AerospaceMode {
+  action_cmd = "macos-native-"
   minimize: String?
-  /// Enter macOS native fullscreen mode
   fullscreen: String?
 }
 
-/// Workspace focus operations for switching between workspaces
-///
-/// Supports both indexed workspace switching (1, 2, 3...) and sequential
-/// navigation (next/previous).
-class WorkspaceFocus {
-  /// Optional modifier override for workspace focus
-  modifier: ModifierInput?
-  
-  /// Mapping of workspace identifiers to key bindings
-  /// Example: `new { ["1"] = "1"; ["web"] = "w" }`
-  mappings: Mapping<String, String>?
-  /// Focus next workspace
-  next: String?
-  /// Focus previous workspace  
-  prev: String?
+class WorkspaceFocus extends Sequential {
+  action_cmd = "workspace"
 }
 
-/// Workspace move operations for relocating windows between workspaces
-class WorkspaceMove {
-  /// Optional modifier override for workspace moves
-  modifier: ModifierInput?
-  
-  /// Mapping of workspace identifiers to key bindings for moving current window
-  mappings: Mapping<String, String>?
-  /// Move window to next workspace
-  next: String?
-  /// Move window to previous workspace
-  prev: String?
+class WorkspaceMove extends Sequential {
+  focusShouldFollow = true
+  action_cmd = if (focusShouldFollow) "move-node-to-workspace --focus-follows-window" else "move-node-to-workspace"
 }
 
-/// Workspace summon operations
-///
-/// AeroSpace-specific feature for moving entire workspaces to the current monitor,
-/// useful for multi-monitor setups.
-class WorkspaceSummon {
-  /// Optional modifier override for summon operations
-  modifier: ModifierInput?
-  
-  /// Mapping of workspace identifiers to key bindings for summoning workspaces
-  mappings: Mapping<String, String>?
+class WorkspaceSummon extends Sequential {
+  action_cmd = "summon-workspace"
 }
 
-/// Workspace tree operations for layout management
-///
-/// Advanced layout control operations that work with AeroSpace's window tree structure.
-class WorkspaceTree {
-  /// Optional modifier override for tree operations
-  modifier: ModifierInput?
-  
-  /// Flatten workspace tree - reset complex nested layouts to simple structure
+class WorkspaceTree extends AerospaceMode {
+  action_cmd = ""
   flatten: String?
-  /// Toggle accordion layout mode
   accordion: String?
 }
 
-/// Monitor focus operations for multi-monitor setups
-class MonitorFocus {
-  /// Optional modifier override for monitor focus
-  modifier: ModifierInput?
-  
-  /// Mapping of monitor identifiers to key bindings
-  mappings: Mapping<String, String>?
-  /// Focus monitor to the left
-  left: String?
-  /// Focus monitor to the right
-  right: String?
-  /// Focus next monitor
-  next: String?
-  /// Focus previous monitor
-  prev: String?
+class MonitorFocus extends Sequential {
+  action_cmd = "focus-monitor"
 }
 
-/// Monitor move operations for relocating windows between monitors
-class MonitorMove {
-  /// Optional modifier override for monitor moves
-  modifier: ModifierInput?
-  
-  /// Mapping of monitor identifiers to key bindings for moving current window
-  mappings: Mapping<String, String>?
-  /// Move window to monitor on the left
-  left: String?
-  /// Move window to monitor on the right
-  right: String?
-  /// Move window to next monitor
-  next: String?
-  /// Move window to previous monitor
-  prev: String?
+class MonitorMove extends Sequential {
+  focusShouldFollow = true
+  action_cmd = if (focusShouldFollow) "move-node-to-monitor --focus-follows-window" else "move-node-to-monitor"
 }
 
-/// Mode-specific key binding configuration
-///
-/// Defines key bindings that are active only when a specific mode is active.
-/// This enables context-sensitive keyboard shortcuts similar to vim modes.
-class ModeBindings {
-  /// Mapping of key bindings to AeroSpace commands for this mode
-  /// Example: `new { ["h"] = "resize width -100"; ["l"] = "resize width +100" }`
-  bindings: Mapping<String, String>?
-  
-  /// Key binding to exit this mode and return to main mode
+class ModeBindings extends AerospaceMode {
+  action_cmd = "mode"
+  trigger: String?
+  bindings: Mapping<String, String> = new Mapping {}
   exitKey: String = "escape"
 }
 
-/// Mode configuration for context-specific key bindings
-///
-/// AeroSpace's mode system allows creating context-specific key binding sets,
-/// similar to vim's normal/insert/visual modes but for window management.
-///
-/// ## Example Usage
-///
-/// ```pkl
-/// modes = new aerospace.Modes {
-///   resize = new aerospace.Mode {
-///     trigger = "r"
-///     modifier = "left_alt"
-///     
-///     bindings = new aerospace.ModeBindings {
-///       bindings = new {
-///         ["h"] = "resize width -50"
-///         ["l"] = "resize width +50"
-///         ["j"] = "resize height +50"
-///         ["k"] = "resize height -50"
-///       }
-///     }
-///   }
-/// }
-/// ```
-class Mode {
-  /// Key binding to activate this mode
-  trigger: String?
-  /// Modifier keys required to activate this mode
-  modifier: ModifierInput?
-  /// Key bindings active when this mode is enabled
-  bindings: ModeBindings?
+class Apps extends AerospaceMode {
+  action_cmd = "exec-and-forget"
+  launchers: Mapping<String, String> = new Mapping {}
 }
 
-/// Collection of mode configurations
-///
-/// Organizes multiple modes for different contexts (resize, layout, apps, etc.).
-class Modes {
-  /// Resize mode for window size adjustments
-  resize: Mode?
-  /// Layout mode for window arrangement
-  layout: Mode?
-  /// Service mode for system operations
-  service: Mode?
-  /// Custom mode 1
-  custom1: Mode?
-  /// Custom mode 2
-  custom2: Mode?
-  /// Custom mode 3
-  custom3: Mode?
+
+
+class Triggers extends AerospaceMode {
+  action_cmd = "trigger-binding"
+  macros: Mapping<String, List<String>> = new Mapping {}
 }
 
-/// Application launcher configuration
-///
-/// Provides keyboard shortcuts for launching applications using AeroSpace's
-/// exec-and-forget command.
-class Apps {
-  /// Base modifier for application launching
-  modifier: ModifierInput?
-  
-  /// Mapping of application launch commands to key bindings
-  /// Example: `new { ["t"] = "open -a Terminal"; ["c"] = "open -a 'Visual Studio Code'" }`
-  launchers: Mapping<String, String>?
+open class AerospaceFeature {
+  modifier: (String|List<String>)?
+  function rules() = toMap().fold(List(), (acc, k, v) -> if (k == "modifier" || v?.rules() is Null) acc else acc.add(v.rules()))
 }
 
-/// Query command configuration for system information
-///
-/// Provides shortcuts for querying AeroSpace state information,
-/// useful for status bars or scripting.
-class Queries {
-  /// Base modifier for query operations
-  modifier: ModifierInput?
-  
-  /// Get information about the currently focused window
-  currentWindow: String?
-  /// Get information about the current workspace
-  currentWorkspace: String?
-  /// List all running applications
-  allApps: String?
-  /// List all available monitors
-  monitors: String?
-  /// List all workspaces
-  workspaces: String?
-}
-
-/// Trigger binding configuration for macro operations
-///
-/// Allows programmatically triggering other key bindings, enabling
-/// complex macro sequences and automation.
-class Triggers {
-  /// Base modifier for trigger operations
-  modifier: ModifierInput?
-  
-  /// Mapping of macro names to sequences of trigger-binding commands
-  /// Example: `new { ["reset"] = List("trigger-binding f", "trigger-binding t") }`
-  macros: Mapping<String, List<String>>?
-}
-
-/// Main window operations container
-///
-/// Groups all window-related operations with optional shared modifier inheritance.
-class Window {
-  /// Base modifier inherited by all window operations
-  modifier: ModifierInput?
-  
-  /// Window focus operations
+class Window extends AerospaceFeature {
   focus: WindowFocus?
-  /// Window movement operations  
   move: WindowMove?
-  /// Window resizing operations
   resize: WindowResize?
-  /// Window layout operations
   layout: WindowLayout?
-  /// Window join operations (AeroSpace-specific)
   join: WindowJoin?
-  /// Window close operations
   close: WindowClose?
-  /// Native macOS window operations
   native: WindowNative?
 }
 
-/// Main workspace operations container
-///
-/// Groups all workspace-related operations with optional shared modifier inheritance.
-class Workspace {
-  /// Base modifier inherited by all workspace operations
-  modifier: ModifierInput?
-  
-  /// Workspace focus operations
+class Workspace extends AerospaceFeature {
   focus: WorkspaceFocus?
-  /// Workspace move operations
-  move: WorkspaceMove?  
-  /// Workspace summon operations (AeroSpace-specific)
+  move: WorkspaceMove?
   summon: WorkspaceSummon?
-  /// Workspace tree operations (AeroSpace-specific)
   tree: WorkspaceTree?
 }
 
-/// Main monitor operations container
-///
-/// Groups all monitor-related operations with optional shared modifier inheritance.
-class Monitor {
-  /// Base modifier inherited by all monitor operations
-  modifier: ModifierInput?
-  
-  /// Monitor focus operations
+class Monitor extends AerospaceFeature {
   focus: MonitorFocus?
-  /// Monitor move operations
   move: MonitorMove?
 }
 
-/// Main AeroSpace configuration class
-///
-/// This is the primary configuration object that generates Karabiner-Elements rules
-/// for AeroSpace window management. It provides a declarative API for configuring
-/// all aspects of AeroSpace integration.
-///
-/// ## Configuration Example
-///
-/// ```pkl
-/// aerospace = new aerospace.AeroSpace {
-///   window = new aerospace.Window {
-///     modifier = "left_alt"
-///     focus = new aerospace.WindowFocus {
-///       left = "h"
-///       right = "l"
-///     }
-///   }
-///   
-///   workspace = new aerospace.Workspace {
-///     focus = new aerospace.WorkspaceFocus {
-///       mappings = new { ["1"] = "1"; ["2"] = "2" }
-///     }
-///   }
-/// }
-/// ```
+class Modes extends AerospaceFeature {
+  resize: ModeBindings?
+  layout: ModeBindings?
+  service: ModeBindings?
+  custom1: ModeBindings?
+  custom2: ModeBindings?
+  custom3: ModeBindings?
+}
+
 class AeroSpace {
-  /// Path to the AeroSpace executable
-  cmdPath: String = "/Applications/AeroSpace.app/Contents/MacOS/AeroSpace"
-  
-  /// Window management operations
+  modifier = null
+  cmdPath: String = "/opt/homebrew/bin/aerospace"
+
   window: Window?
-  /// Workspace management operations  
   workspace: Workspace?
-  /// Monitor management operations
   monitor: Monitor?
-  /// Mode system configuration (AeroSpace-specific)
   modes: Modes?
-  /// Application launcher configuration (AeroSpace-specific)
   apps: Apps?
-  /// Query command configuration (AeroSpace-specific)
-  queries: Queries?
-  /// Trigger binding configuration for macros (AeroSpace-specific)
   triggers: Triggers?
-  
-  /// Creates a shell command action for Karabiner-Elements
-  local function shellCommand(args: String): karabiner.ToEvent = (karabiner.ToEvent) {
-    shell_command = "\(cmdPath) \(args)"
-  }
-  
-  /// Creates a basic Karabiner manipulator for a key binding
-  local function manipulator(key: String, modList: List<String>?, command: String): karabiner.Manipulator = 
-    (karabiner.Manipulator) {
-      type = "basic"
-      from = (karabiner.FromEvent) {
-        key_code = key
-        modifiers = if (modList != null) (karabiner.Modifiers) {
-          mandatory = modList
-        } else null
-      }
-      to = List(shellCommand(command))
-    }
-  
-  /// Gets the effective modifier list, with child overriding parent
-  local function getEffectiveModifier(parentMod: ModifierInput?, childMod: ModifierInput?): List<String>? =
-    toModifierList(childMod ?? parentMod)
-  
-  /// Creates manipulators for directional operations (left, right, up, down)
-  local function directionalManipulators(
-    mapping: Mapping<String, String?>,
-    modifiers: List<String>?,
-    commandPrefix: String
-  ): List<karabiner.Manipulator> =
-    mapping.keys.toList()
-      .filter((direction) -> mapping[direction] != null)
-      .map((direction) ->
-        let (key = mapping[direction])
-        if (key != null) manipulator(key, modifiers, "\(commandPrefix) \(direction)")
-        else null
-      )
-      .filter((m) -> m != null)
-  
-  /// Creates manipulators for indexed operations (workspace numbers, monitor IDs)
-  local function indexedManipulators(
-    mappings: Mapping<String, String>?,
-    modifiers: List<String>?,
-    commandPrefix: String
-  ): List<karabiner.Manipulator> =
-    if (mappings == null) List()
-    else mappings.keys.toList()
-      .map((index) ->
-        let (key = mappings[index])
-        if (key != null) manipulator(key, modifiers, "\(commandPrefix) \(index)")
-        else null
-      )
-      .filter((m) -> m != null)
-  
-  /// Creates manipulators for sequential operations (next, prev, etc.)
-  local function sequentialManipulators(
-    actions: Mapping<String, String?>,
-    modifiers: List<String>?,
-    commandPrefix: String
-  ): List<karabiner.Manipulator> =
-    actions.keys.toList()
-      .filter((action) -> actions[action] != null)
-      .map((action) ->
-        let (key = actions[action])
-        if (key != null) manipulator(key, modifiers, "\(commandPrefix) \(action)")
-        else null
-      )
-      .filter((m) -> m != null)
-  
-  /// Creates manipulators for mode activation bindings
-  local function modeManipulators(
-    mode: Mode,
-    modifiers: List<String>?
-  ): List<karabiner.Manipulator> =
-    if (mode.trigger == null) List()
-    else List(manipulator(mode.trigger, modifiers, "mode \(mode.trigger)"))
-  
-  /// Creates manipulators for mode-specific bindings
-  local function modeBindingManipulators(
-    modeName: String,
-    bindings: ModeBindings?
-  ): List<karabiner.Manipulator> =
-    if (bindings?.bindings == null) List()
-    else
-      let (exitManipulator = manipulator(bindings.exitKey, null, "mode main"))
-      let (commandManipulators = bindings.bindings.keys.toList()
-        .map((key) ->
-          let (command = bindings.bindings[key])
-          if (command != null) manipulator(key, null, command)
-          else null
-        )
-        .filter((m) -> m != null))
-      List(exitManipulator) + commandManipulators
-  
-  /// Generates rules for window operations
-  local function generateWindowRules(): List<karabiner.Rule> =
-    if (window == null) List()
-    else List(
-      generateWindowFocusRule(),
-      generateWindowMoveRule(), 
-      generateWindowResizeRule(),
-      generateWindowLayoutRule(),
-      generateWindowJoinRule(),
-      generateWindowCloseRule(),
-      generateWindowNativeRule()
-    ).filter((r) -> r != null)
-  
-  /// Generates window focus rule
-  local function generateWindowFocusRule(): karabiner.Rule? =
-    if (window?.focus == null) null
-    else
-      let (focus = window.focus)
-      let (mods = getEffectiveModifier(window.modifier, focus.modifier))
-      let (directional = directionalManipulators(new Mapping {
-        ["left"] = focus.left
-        ["down"] = focus.down
-        ["up"] = focus.up
-        ["right"] = focus.right
-      }, mods, "focus"))
-      let (special = List() +
-        (if (focus.dfsNext != null) List(manipulator(focus.dfsNext, mods, "focus dfs-next")) else List()) +
-        (if (focus.dfsPrev != null) List(manipulator(focus.dfsPrev, mods, "focus dfs-prev")) else List()))
-      
-      if (directional.isEmpty && special.isEmpty) null
-      else (karabiner.Rule) {
-        description = "AeroSpace: Focus windows"
-        manipulators = directional + special
-      }
-  
-  /// Generates window move rule
-  local function generateWindowMoveRule(): karabiner.Rule? =
-    if (window?.move == null) null
-    else
-      let (move = window.move)
-      let (mods = getEffectiveModifier(window.modifier, move.modifier))
-      let (directional = directionalManipulators(new Mapping {
-        ["left"] = move.left
-        ["down"] = move.down
-        ["up"] = move.up
-        ["right"] = move.right
-      }, mods, "move"))
-      
-      if (directional.isEmpty) null
-      else (karabiner.Rule) {
-        description = "AeroSpace: Move windows"
-        manipulators = directional
-      }
-  
-  /// Generates window resize rule
-  local function generateWindowResizeRule(): karabiner.Rule? =
-    if (window?.resize == null) null
-    else
-      let (resize = window.resize)
-      let (mods = getEffectiveModifier(window.modifier, resize.modifier))
-      let (commands = List() +
-        (if (resize.width != null) List(manipulator(resize.width, mods, "resize width \(resize.amount)")) else List()) +
-        (if (resize.height != null) List(manipulator(resize.height, mods, "resize height \(resize.amount)")) else List()) +
-        (if (resize.smart != null) List(manipulator(resize.smart, mods, "resize smart \(resize.amount)")) else List()) +
-        (if (resize.smartOpposite != null) List(manipulator(resize.smartOpposite, mods, "resize smart-opposite \(resize.amount)")) else List()))
-      
-      if (commands.isEmpty) null
-      else (karabiner.Rule) {
-        description = "AeroSpace: Resize windows"
-        manipulators = commands
-      }
-  
-  /// Generates window layout rule
-  local function generateWindowLayoutRule(): karabiner.Rule? =
-    if (window?.layout == null) null
-    else
-      let (layout = window.layout)
-      let (mods = getEffectiveModifier(window.modifier, layout.modifier))
-      let (commands = List() +
-        (if (layout.tiling != null) List(manipulator(layout.tiling, mods, "layout tiling")) else List()) +
-        (if (layout.floating != null) List(manipulator(layout.floating, mods, "layout floating")) else List()) +
-        (if (layout.hTiles != null) List(manipulator(layout.hTiles, mods, "layout h_tiles")) else List()) +
-        (if (layout.vTiles != null) List(manipulator(layout.vTiles, mods, "layout v_tiles")) else List()) +
-        (if (layout.fullscreen != null) List(manipulator(layout.fullscreen, mods, "fullscreen")) else List()))
-      
-      if (commands.isEmpty) null
-      else (karabiner.Rule) {
-        description = "AeroSpace: Window layout"
-        manipulators = commands
-      }
-  
-  /// Generates window join rule
-  local function generateWindowJoinRule(): karabiner.Rule? =
-    if (window?.join == null) null
-    else
-      let (join = window.join)
-      let (mods = getEffectiveModifier(window.modifier, join.modifier))
-      let (directional = directionalManipulators(new Mapping {
-        ["left"] = join.left
-        ["down"] = join.down
-        ["up"] = join.up
-        ["right"] = join.right
-      }, mods, "join-with"))
-      
-      if (directional.isEmpty) null
-      else (karabiner.Rule) {
-        description = "AeroSpace: Join windows"
-        manipulators = directional
-      }
-  
-  /// Generates window close rule
-  local function generateWindowCloseRule(): karabiner.Rule? =
-    if (window?.close == null) null
-    else
-      let (close = window.close)
-      let (mods = getEffectiveModifier(window.modifier, close.modifier))
-      let (commands = List() +
-        (if (close.current != null) List(manipulator(close.current, mods, "close")) else List()) +
-        (if (close.allButCurrent != null) List(manipulator(close.allButCurrent, mods, "close-all-windows-but-current")) else List()))
-      
-      if (commands.isEmpty) null
-      else (karabiner.Rule) {
-        description = "AeroSpace: Close windows"
-        manipulators = commands
-      }
-  
-  /// Generates window native operations rule
-  local function generateWindowNativeRule(): karabiner.Rule? =
-    if (window?.native == null) null
-    else
-      let (native = window.native)
-      let (mods = getEffectiveModifier(window.modifier, native.modifier))
-      let (commands = List() +
-        (if (native.minimize != null) List(manipulator(native.minimize, mods, "macos-native-minimize")) else List()) +
-        (if (native.fullscreen != null) List(manipulator(native.fullscreen, mods, "macos-native-fullscreen")) else List()))
-      
-      if (commands.isEmpty) null
-      else (karabiner.Rule) {
-        description = "AeroSpace: Native macOS operations"
-        manipulators = commands
-      }
-  
-  /// Generates rules for workspace operations
-  local function generateWorkspaceRules(): List<karabiner.Rule> =
-    if (workspace == null) List()
-    else List(
-      generateWorkspaceFocusRule(),
-      generateWorkspaceMoveRule(),
-      generateWorkspaceSummonRule(),
-      generateWorkspaceTreeRule()
-    ).filter((r) -> r != null)
-  
-  /// Generates workspace focus rule
-  local function generateWorkspaceFocusRule(): karabiner.Rule? =
-    if (workspace?.focus == null) null
-    else
-      let (focus = workspace.focus)
-      let (mods = getEffectiveModifier(workspace.modifier, focus.modifier))
-      let (indexed = indexedManipulators(focus.mappings, mods, "workspace"))
-      let (sequential = List() +
-        (if (focus.next != null) List(manipulator(focus.next, mods, "workspace next")) else List()) +
-        (if (focus.prev != null) List(manipulator(focus.prev, mods, "workspace prev")) else List()))
-      
-      if (indexed.isEmpty && sequential.isEmpty) null
-      else (karabiner.Rule) {
-        description = "AeroSpace: Focus workspaces"
-        manipulators = indexed + sequential
-      }
-  
-  /// Generates workspace move rule
-  local function generateWorkspaceMoveRule(): karabiner.Rule? =
-    if (workspace?.move == null) null
-    else
-      let (move = workspace.move)
-      let (mods = getEffectiveModifier(workspace.modifier, move.modifier))
-      let (indexed = indexedManipulators(move.mappings, mods, "move-node-to-workspace"))
-      let (sequential = List() +
-        (if (move.next != null) List(manipulator(move.next, mods, "move-node-to-workspace next")) else List()) +
-        (if (move.prev != null) List(manipulator(move.prev, mods, "move-node-to-workspace prev")) else List()))
-      
-      if (indexed.isEmpty && sequential.isEmpty) null
-      else (karabiner.Rule) {
-        description = "AeroSpace: Move to workspace"
-        manipulators = indexed + sequential
-      }
-  
-  /// Generates workspace summon rule
-  local function generateWorkspaceSummonRule(): karabiner.Rule? =
-    if (workspace?.summon == null) null
-    else
-      let (summon = workspace.summon)
-      let (mods = getEffectiveModifier(workspace.modifier, summon.modifier))
-      let (indexed = indexedManipulators(summon.mappings, mods, "summon-workspace"))
-      
-      if (indexed.isEmpty) null
-      else (karabiner.Rule) {
-        description = "AeroSpace: Summon workspaces"
-        manipulators = indexed
-      }
-  
-  /// Generates workspace tree operations rule
-  local function generateWorkspaceTreeRule(): karabiner.Rule? =
-    if (workspace?.tree == null) null
-    else
-      let (tree = workspace.tree)
-      let (mods = getEffectiveModifier(workspace.modifier, tree.modifier))
-      let (commands = List() +
-        (if (tree.flatten != null) List(manipulator(tree.flatten, mods, "flatten-workspace-tree")) else List()) +
-        (if (tree.accordion != null) List(manipulator(tree.accordion, mods, "layout accordion")) else List()))
-      
-      if (commands.isEmpty) null
-      else (karabiner.Rule) {
-        description = "AeroSpace: Workspace tree operations"
-        manipulators = commands
-      }
-  
-  /// Generates rules for monitor operations
-  local function generateMonitorRules(): List<karabiner.Rule> =
-    if (monitor == null) List()
-    else List(
-      generateMonitorFocusRule(),
-      generateMonitorMoveRule()
-    ).filter((r) -> r != null)
-  
-  /// Generates monitor focus rule
-  local function generateMonitorFocusRule(): karabiner.Rule? =
-    if (monitor?.focus == null) null
-    else
-      let (focus = monitor.focus)
-      let (mods = getEffectiveModifier(monitor.modifier, focus.modifier))
-      let (indexed = indexedManipulators(focus.mappings, mods, "focus-monitor"))
-      let (directional = directionalManipulators(new Mapping {
-        ["left"] = focus.left
-        ["right"] = focus.right
-      }, mods, "focus-monitor"))
-      let (sequential = List() +
-        (if (focus.next != null) List(manipulator(focus.next, mods, "focus-monitor next")) else List()) +
-        (if (focus.prev != null) List(manipulator(focus.prev, mods, "focus-monitor prev")) else List()))
-      
-      if (indexed.isEmpty && directional.isEmpty && sequential.isEmpty) null
-      else (karabiner.Rule) {
-        description = "AeroSpace: Focus monitors"
-        manipulators = indexed + directional + sequential
-      }
-  
-  /// Generates monitor move rule
-  local function generateMonitorMoveRule(): karabiner.Rule? =
-    if (monitor?.move == null) null
-    else
-      let (move = monitor.move)
-      let (mods = getEffectiveModifier(monitor.modifier, move.modifier))
-      let (indexed = indexedManipulators(move.mappings, mods, "move-node-to-monitor"))
-      let (directional = directionalManipulators(new Mapping {
-        ["left"] = move.left
-        ["right"] = move.right
-      }, mods, "move-node-to-monitor"))
-      let (sequential = List() +
-        (if (move.next != null) List(manipulator(move.next, mods, "move-node-to-monitor next")) else List()) +
-        (if (move.prev != null) List(manipulator(move.prev, mods, "move-node-to-monitor prev")) else List()))
-      
-      if (indexed.isEmpty && directional.isEmpty && sequential.isEmpty) null
-      else (karabiner.Rule) {
-        description = "AeroSpace: Move to monitor"
-        manipulators = indexed + directional + sequential
-      }
-  
-  /// Generates rules for mode system
-  local function generateModeRules(): List<karabiner.Rule> =
-    if (modes == null) List()
-    else List(
-      generateModeActivationRules(),
-      generateModeBindingRules()
-    ).filter((r) -> r != null).flatten()
-  
-  /// Generates mode activation rules
-  local function generateModeActivationRules(): List<karabiner.Rule> =
-    let (modeList = List(
-      { name = "resize"; mode = modes?.resize },
-      { name = "layout"; mode = modes?.layout },
-      { name = "service"; mode = modes?.service },
-      { name = "custom1"; mode = modes?.custom1 },
-      { name = "custom2"; mode = modes?.custom2 },
-      { name = "custom3"; mode = modes?.custom3 }
-    ))
-    modeList
-      .filter((entry) -> entry.mode != null)
-      .map((entry) ->
-        let (mode = entry.mode)
-        let (mods = toModifierList(mode.modifier))
-        let (manipulators = modeManipulators(mode, mods))
-        
-        if (manipulators.isEmpty) null
-        else (karabiner.Rule) {
-          description = "AeroSpace: Activate \(entry.name) mode"
-          manipulators = manipulators
-        }
-      )
-      .filter((r) -> r != null)
-  
-  /// Generates mode-specific binding rules
-  local function generateModeBindingRules(): List<karabiner.Rule> =
-    let (modeList = List(
-      { name = "resize"; mode = modes?.resize },
-      { name = "layout"; mode = modes?.layout },
-      { name = "service"; mode = modes?.service },
-      { name = "custom1"; mode = modes?.custom1 },
-      { name = "custom2"; mode = modes?.custom2 },
-      { name = "custom3"; mode = modes?.custom3 }
-    ))
-    modeList
-      .filter((entry) -> entry.mode?.bindings != null)
-      .map((entry) ->
-        let (manipulators = modeBindingManipulators(entry.name, entry.mode.bindings))
-        
-        if (manipulators.isEmpty) null
-        else (karabiner.Rule) {
-          description = "AeroSpace: \(entry.name) mode bindings"
-          manipulators = manipulators
-          conditions = List(new karabiner.Condition {
-            type = "variable_if"
-            name = "aerospace_mode"
-            value = entry.name
-          })
-        }
-      )
-      .filter((r) -> r != null)
-  
-  /// Generates rules for application launching
-  local function generateAppRules(): List<karabiner.Rule> =
-    if (apps?.launchers == null) List()
-    else
-      let (mods = toModifierList(apps.modifier))
-      let (manipulators = apps.launchers.keys.toList()
-        .map((app) ->
-          let (key = apps.launchers[app])
-          let (command = apps.launchers[app])
-          if (key != null && command != null) 
-            manipulator(key, mods, "exec-and-forget \(command)")
-          else null
-        )
-        .filter((m) -> m != null))
-      
-      if (manipulators.isEmpty) List()
-      else List((karabiner.Rule) {
-        description = "AeroSpace: Launch applications"
-        manipulators = manipulators
-      })
-  
-  /// Generates rules for query commands
-  local function generateQueryRules(): List<karabiner.Rule> =
-    if (queries == null) List()
-    else
-      let (mods = toModifierList(queries.modifier))
-      let (commands = List() +
-        (if (queries.currentWindow != null) List(manipulator(queries.currentWindow, mods, "list-windows --focused")) else List()) +
-        (if (queries.currentWorkspace != null) List(manipulator(queries.currentWorkspace, mods, "list-workspaces --focused")) else List()) +
-        (if (queries.allApps != null) List(manipulator(queries.allApps, mods, "list-apps")) else List()) +
-        (if (queries.monitors != null) List(manipulator(queries.monitors, mods, "list-monitors")) else List()) +
-        (if (queries.workspaces != null) List(manipulator(queries.workspaces, mods, "list-workspaces")) else List()))
-      
-      if (commands.isEmpty) List()
-      else List((karabiner.Rule) {
-        description = "AeroSpace: Query commands"
-        manipulators = commands
-      })
-  
-  /// Generates rules for trigger bindings
-  local function generateTriggerRules(): List<karabiner.Rule> =
-    if (triggers?.macros == null) List()
-    else
-      let (mods = toModifierList(triggers.modifier))
-      let (manipulators = triggers.macros.keys.toList()
-        .map((macro) ->
-          let (key = macro)
-          let (commands = triggers.macros[macro])
-          if (commands != null && !commands.isEmpty)
-            (karabiner.Manipulator) {
-              type = "basic"
-              from = (karabiner.FromEvent) {
-                key_code = key
-                modifiers = if (mods != null) (karabiner.Modifiers) {
-                  mandatory = mods
-                } else null
-              }
-              to = commands.map((cmd) -> shellCommand(cmd))
-            }
-          else null
-        )
-        .filter((m) -> m != null))
-      
-      if (manipulators.isEmpty) List()
-      else List((karabiner.Rule) {
-        description = "AeroSpace: Trigger bindings"
-        manipulators = manipulators
-      })
-  
-  /// Builds the complete list of Karabiner-Elements rules
-  ///
-  /// This property generates all configured rules for window management, workspace operations,
-  /// monitor control, mode system, application launching, and advanced AeroSpace features.
-  ///
-  /// @return List of Karabiner-Elements rules ready for use in configuration
-  build: List<karabiner.Rule> = 
-    generateWindowRules() + 
-    generateWorkspaceRules() + 
-    generateMonitorRules() +
-    generateModeRules() +
-    generateAppRules() +
-    generateQueryRules() +
-    generateTriggerRules()
+
+  build: List<karabiner.Rule> = List(window, workspace, monitor, modes, apps, triggers).flatMap((f) -> f?.rules() ?? List())
 }
