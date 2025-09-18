@@ -9,7 +9,7 @@ cmdPath = "/opt/homebrew/bin/yabai"
 open class YabaiMode {
   cmdPath = "/opt/homebrew/bin/yabai"
   actions = List("west", "south", "north", "east", "recent", "prev", "next", "first", "last")
-  modifier: List<karabiner.Modifier> | karabiner.Modifier | String
+  modifier: (List<karabiner.Modifier> | karabiner.Modifier | String)?
   mappings: Mapping<String, String> = new Mapping {}
   // mod: List<karabiner.Modifier> | karabiner.Modifier | String = modifier ?? super.mod
   action_cmd: String
@@ -19,6 +19,10 @@ open class YabaiMode {
   function manipulators() = defined().entries.toMap((entry) -> entry.value, (entry) -> core.shell("\(cmdPath) \(action_cmd) \(entry.key)").single)
   function defined() = toMap().filter((key, val) -> !(ignore.contains(key) || val is Null)) + this.mappings.toMap()
   function rules() = if (manipulators().isEmpty) null else new core.SimLayer {trigger = modifier; maps = manipulators().toMapping()}.build().last
+  function build(parentModifier: (String | List<String>)?): karabiner.Rule? = 
+    let (effectiveModifier = modifier ?? parentModifier)
+    if (manipulators().isEmpty || effectiveModifier == null) null
+    else new core.SimLayer {trigger = effectiveModifier; maps = manipulators().toMapping()}.build().last
 }
 
 open class Sequential extends YabaiMode {
@@ -123,6 +127,16 @@ class StackSwap extends Sequential {
 open class YabaiFeature {
   modifier: (String|List<String>)?
   function rules() = toMap().fold(List(), (acc, k, v) -> if (k == "modifier" ||  v?.rules() is Null) acc else acc.add(v.rules()))
+  function build(parentModifier: (String | List<String>)?): List<karabiner.Rule> = 
+    let (effectiveModifier = modifier ?? parentModifier)
+    toMap().fold(List(), (acc, k, v) -> 
+      if (k == "modifier" || v == null) acc
+      else if (v is YabaiMode) 
+        let (rule = v.build(effectiveModifier))
+        if (rule == null) acc else acc.add(rule)
+      else if (v is YabaiFeature) acc + v.build(effectiveModifier)
+      else acc
+    )
 }
 
 class Window extends YabaiFeature {
@@ -147,7 +161,7 @@ class Display extends YabaiFeature {
 }
 
 class Toggles extends YabaiMode{
-  action_cmd = " "
+  action_cmd = "-m window --toggle"
   float: String?
   sticky: String?
   zoom: String?
@@ -161,6 +175,15 @@ class Toggles extends YabaiMode{
   pip: String?
   shadow: String?
   border: String?
+  
+  function build(parentModifier: (String | List<String>)?): karabiner.Rule? = 
+    let (effectiveModifier = modifier ?? parentModifier)
+    let (toggleMappings = defined().entries.toMap(
+      (entry) -> entry.value,
+      (entry) -> core.shell("\(cmdPath) -m window --toggle \(entry.key)").single
+    ))
+    if (toggleMappings.isEmpty || effectiveModifier == null) null
+    else new core.SimLayer {trigger = effectiveModifier; maps = toggleMappings.toMapping()}.build().last
 }
 
 class Stack extends YabaiFeature {
@@ -169,7 +192,7 @@ class Stack extends YabaiFeature {
 }
 
 class Yabai {
-  modifier = null
+  modifier: (String | List<String>)? = null
   mod = modifier ?? ""
   cmdPath: String = "/opt/homebrew/bin/yabai"
 
@@ -179,6 +202,13 @@ class Yabai {
   toggles: Toggles?
   stack: Stack?
 
-  build: List<karabiner.Rule> = List(window, space, display, stack).flatMap((f) -> f?.rules() ?? List())
+  build: List<karabiner.Rule> = 
+    List(
+      window?.build(modifier),
+      space?.build(modifier),
+      display?.build(modifier),
+      toggles?.build(modifier),
+      stack?.build(modifier)
+    ).filterNonNull().flatten()
 
 }
