@@ -47,8 +47,8 @@ open class BasicMap extends karabiner.Manipulator {
 open class DualUse extends BasicMap {
   hidden tap: Action
   hidden hold: karabiner.Event
-  aloneAction = hold.as_action
-  action = tap
+  aloneAction = tap
+  action = hold.as_action
 }
 
 function shell(cmd) = List(new karabiner.ToEvent {shell_command = cmd})
