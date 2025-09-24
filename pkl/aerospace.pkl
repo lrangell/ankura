@@ -8,11 +8,11 @@ cmdPath = "/opt/homebrew/bin/aerospace"
 open class AerospaceMode {
   cmdPath = "/opt/homebrew/bin/aerospace"
   modifier: (List<karabiner.Modifier> | karabiner.Modifier | String)?
-  mappings: Mapping<String, String> = new Mapping {}
+  mappings: Mapping<String, core.UserInput> = new Mapping {}
   action_cmd: String
   ignore = List("manipulators", "defined", "rules", "modifier", "action_cmd", "cmdPath", "ignore", "mappings", "focusShouldFollow")
 
-  function manipulators() = defined().entries.toMap((entry) -> entry.value, (entry) -> core.shell("\(cmdPath) \(action_cmd) \(entry.key)").single)
+  function manipulators() = defined().entries.toMap((entry) -> if (entry.value is karabiner.Event) entry.value.key_code else entry.value, (entry) -> core.shell("\(cmdPath) \(action_cmd) \(entry.key)").single)
   function defined() = toMap().filter((key, val) -> !(ignore.contains(key) || val is Null)) + this.mappings.toMap()
   function rules() = if (manipulators().isEmpty) null else new core.SimLayer {trigger = modifier; maps = manipulators().toMapping()}.build().last
   function build(parentModifier: (String | List<String>)?): karabiner.Rule? =

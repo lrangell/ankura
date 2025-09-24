@@ -214,135 +214,135 @@ class Modifiers {
 }
 
 class Keys {
-  a = "a"
-  b = "b"
-  c = "c"
-  d = "d"
-  e = "e"
-  f = "f"
-  g = "g"
-  h = "h"
-  i = "i"
-  j = "j"
-  k = "k"
-  l = "l"
-  m = "m"
-  n = "n"
-  o = "o"
-  p = "p"
-  q = "q"
-  r = "r"
-  s = "s"
-  t = "t"
-  u = "u"
-  v = "v"
-  w = "w"
-  x = "x"
-  y = "y"
-  z: "z"
+  a = new karabiner.Event { key_code = "a" }
+  b = new karabiner.Event { key_code = "b" }
+  c = new karabiner.Event { key_code = "c" }
+  d = new karabiner.Event { key_code = "d" }
+  e = new karabiner.Event { key_code = "e" }
+  f = new karabiner.Event { key_code = "f" }
+  g = new karabiner.Event { key_code = "g" }
+  h = new karabiner.Event { key_code = "h" }
+  i = new karabiner.Event { key_code = "i" }
+  j = new karabiner.Event { key_code = "j" }
+  k = new karabiner.Event { key_code = "k" }
+  l = new karabiner.Event { key_code = "l" }
+  m = new karabiner.Event { key_code = "m" }
+  n = new karabiner.Event { key_code = "n" }
+  o = new karabiner.Event { key_code = "o" }
+  p = new karabiner.Event { key_code = "p" }
+  q = new karabiner.Event { key_code = "q" }
+  r = new karabiner.Event { key_code = "r" }
+  s = new karabiner.Event { key_code = "s" }
+  t = new karabiner.Event { key_code = "t" }
+  u = new karabiner.Event { key_code = "u" }
+  v = new karabiner.Event { key_code = "v" }
+  w = new karabiner.Event { key_code = "w" }
+  x = new karabiner.Event { key_code = "x" }
+  y = new karabiner.Event { key_code = "y" }
+  z = new karabiner.Event { key_code = "z" }
 
-  zero = "0"
-  one = "1"
-  two = "2"
-  three = "3"
-  four = "4"
-  five = "5"
-  six = "6"
-  seven = "7"
-  eight = "8"
-  nine = "9"
+  zero = new karabiner.Event { key_code = "0" }
+  one = new karabiner.Event { key_code = "1" }
+  two = new karabiner.Event { key_code = "2" }
+  three = new karabiner.Event { key_code = "3" }
+  four = new karabiner.Event { key_code = "4" }
+  five = new karabiner.Event { key_code = "5" }
+  six = new karabiner.Event { key_code = "6" }
+  seven = new karabiner.Event { key_code = "7" }
+  eight = new karabiner.Event { key_code = "8" }
+  nine = new karabiner.Event { key_code = "9" }
 
-  num0 = "0"
-  num1 = "1"
-  num2 = "2"
-  num3 = "3"
-  num4 = "4"
-  num5 = "5"
-  num6 = "6"
-  num7 = "7"
-  num8 = "8"
-  num9 = "9"
+  num0 = new karabiner.Event { key_code = "0" }
+  num1 = new karabiner.Event { key_code = "1" }
+  num2 = new karabiner.Event { key_code = "2" }
+  num3 = new karabiner.Event { key_code = "3" }
+  num4 = new karabiner.Event { key_code = "4" }
+  num5 = new karabiner.Event { key_code = "5" }
+  num6 = new karabiner.Event { key_code = "6" }
+  num7 = new karabiner.Event { key_code = "7" }
+  num8 = new karabiner.Event { key_code = "8" }
+  num9 = new karabiner.Event { key_code = "9" }
 
-  spacebar = "spacebar"
-  space = "spacebar"
-  tab = "tab"
+  spacebar = new karabiner.Event { key_code = "spacebar" }
+  space = new karabiner.Event { key_code = "spacebar" }
+  tab = new karabiner.Event { key_code = "tab" }
   escape = new karabiner.Event { key_code = "escape" }
   esc = new karabiner.Event { key_code = "escape" }
-  enter = "return_or_enter"
-  returnOrEnter = "return_or_enter"
-  del = "delete_or_backspace"
-  deleteOrBackspace = "delete_or_backspace"
-  backspace = "delete_or_backspace"
-  deleteForward = "delete_forward"
+  enter = new karabiner.Event { key_code = "return_or_enter" }
+  returnOrEnter = new karabiner.Event { key_code = "return_or_enter" }
+  del = new karabiner.Event { key_code = "delete_or_backspace" }
+  deleteOrBackspace = new karabiner.Event { key_code = "delete_or_backspace" }
+  backspace = new karabiner.Event { key_code = "delete_or_backspace" }
+  deleteForward = new karabiner.Event { key_code = "delete_forward" }
 
-  leftArrow = "left_arrow"
-  rightArrow = "right_arrow"
-  upArrow = "up_arrow"
-  downArrow = "down_arrow"
+  leftArrow = new karabiner.Event { key_code = "left_arrow" }
+  rightArrow = new karabiner.Event { key_code = "right_arrow" }
+  upArrow = new karabiner.Event { key_code = "up_arrow" }
+  downArrow = new karabiner.Event { key_code = "down_arrow" }
   left = new karabiner.Event { key_code = "left_arrow" }
   right = new karabiner.Event { key_code = "right_arrow" }
-  up = "up_arrow"
-  down = "down_arrow"
+  up = new karabiner.Event { key_code = "up_arrow" }
+  down = new karabiner.Event { key_code = "down_arrow" }
 
   leftCommand = new karabiner.Event { key_code = "left_command" }
-  leftControl = "left_control"
-  leftOption = "left_option"
-  leftShift = "left_shift"
-  rightCommand = "right_command"
-  rightControl = "right_control"
-  rightOption = "right_option"
-  rightShift = "right_shift"
+  leftControl = new karabiner.Event { key_code = "left_control" }
+  leftOption = new karabiner.Event { key_code = "left_option" }
+  leftShift = new karabiner.Event { key_code = "left_shift" }
+  rightCommand = new karabiner.Event { key_code = "right_command" }
+  rightControl = new karabiner.Event { key_code = "right_control" }
+  rightOption = new karabiner.Event { key_code = "right_option" }
+  rightShift = new karabiner.Event { key_code = "right_shift" }
   cmd = new karabiner.Event { key_code = "left_command" }
   ctrl = new karabiner.Event { key_code = "left_control" }
-  control = "left_control"
+  control = new karabiner.Event { key_code = "left_control" }
   opt = new karabiner.Event { key_code = "left_option" }
   option = new karabiner.Event { key_code = "left_option" }
-  shift = "left_shift"
-  fn = "fn"
+  shift = new karabiner.Event { key_code = "left_shift" }
+  fn = new karabiner.Event { key_code = "fn" }
 
-  f1 = "f1"
-  f2 = "f2"
-  f3 = "f3"
-  f4 = "f4"
-  f5 = "f5"
-  f6 = "f6"
+  f1 = new karabiner.Event { key_code = "f1" }
+  f2 = new karabiner.Event { key_code = "f2" }
+  f3 = new karabiner.Event { key_code = "f3" }
+  f4 = new karabiner.Event { key_code = "f4" }
+  f5 = new karabiner.Event { key_code = "f5" }
+  f6 = new karabiner.Event { key_code = "f6" }
   f7 = new karabiner.Event { key_code = "f7" }
-  f8 = "f8"
-  f9 = "f9"
-  f10 = "f10"
-  f11 = "f11"
-  f12 = "f12"
+  f8 = new karabiner.Event { key_code = "f8" }
+  f9 = new karabiner.Event { key_code = "f9" }
+  f10 = new karabiner.Event { key_code = "f10" }
+  f11 = new karabiner.Event { key_code = "f11" }
+  f12 = new karabiner.Event { key_code = "f12" }
 
-  semicolon = "semicolon"
+  semicolon = new karabiner.Event { key_code = "semicolon" }
   comma = new karabiner.Event { key_code = "comma" }
   period = new karabiner.Event { key_code = "period" }
-  slash = "slash"
-  backslash = "backslash"
-  quote = "quote"
-  graveAccentAndTilde = "grave_accent_and_tilde"
-  grave = "grave_accent_and_tilde"
-  hyphen = "hyphen"
-  equalSign = "equal_sign"
-  equal = "equal_sign"
-  openBracket = "open_bracket"
-  closeBracket = "close_bracket"
+  slash = new karabiner.Event { key_code = "slash" }
+  backslash = new karabiner.Event { key_code = "backslash" }
+  quote = new karabiner.Event { key_code = "quote" }
+  graveAccentAndTilde = new karabiner.Event { key_code = "grave_accent_and_tilde" }
+  grave = new karabiner.Event { key_code = "grave_accent_and_tilde" }
+  hyphen = new karabiner.Event { key_code = "hyphen" }
+  equalSign = new karabiner.Event { key_code = "equal_sign" }
+  equal = new karabiner.Event { key_code = "equal_sign" }
+  openBracket = new karabiner.Event { key_code = "open_bracket" }
+  closeBracket = new karabiner.Event { key_code = "close_bracket" }
 
-  pageUp = "page_up"
-  pageDown = "page_down"
-  home = "home"
-  end = "end"
+  pageUp = new karabiner.Event { key_code = "page_up" }
+  pageDown = new karabiner.Event { key_code = "page_down" }
+  home = new karabiner.Event { key_code = "home" }
+  end = new karabiner.Event { key_code = "end" }
 
   capsLock = new karabiner.Event { key_code = "caps_lock" }
   caps = new karabiner.Event { key_code = "caps_lock" }
 
-  playOrPause = "play_or_pause"
-  playPause = "play_or_pause"
-  play = "play_or_pause"
-  volumeIncrement = "volume_increment"
-  volumeDecrement = "volume_decrement"
-  volumeUp = "volume_increment"
-  volumeDown = "volume_decrement"
-  mute = "mute"
+  playOrPause = new karabiner.Event { key_code = "play_or_pause" }
+  playPause = new karabiner.Event { key_code = "play_or_pause" }
+  play = new karabiner.Event { key_code = "play_or_pause" }
+  volumeIncrement = new karabiner.Event { key_code = "volume_increment" }
+  volumeDecrement = new karabiner.Event { key_code = "volume_decrement" }
+  volumeUp = new karabiner.Event { key_code = "volume_increment" }
+  volumeDown = new karabiner.Event { key_code = "volume_decrement" }
+  mute = new karabiner.Event { key_code = "mute" }
 }
 
 function validateKeyCode(key: String): String = 
