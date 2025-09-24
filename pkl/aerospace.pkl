@@ -7,7 +7,7 @@ cmdPath = "/opt/homebrew/bin/aerospace"
 
 open class AerospaceMode {
   cmdPath = "/opt/homebrew/bin/aerospace"
-  modifier: List<karabiner.Modifier> | karabiner.Modifier | String
+  modifier: (List<karabiner.Modifier> | karabiner.Modifier | String)?
   mappings: Mapping<String, String> = new Mapping {}
   action_cmd: String
   ignore = List("manipulators", "defined", "rules", "modifier", "action_cmd", "cmdPath", "ignore", "mappings", "focusShouldFollow")
@@ -15,6 +15,10 @@ open class AerospaceMode {
   function manipulators() = defined().entries.toMap((entry) -> entry.value, (entry) -> core.shell("\(cmdPath) \(action_cmd) \(entry.key)").single)
   function defined() = toMap().filter((key, val) -> !(ignore.contains(key) || val is Null)) + this.mappings.toMap()
   function rules() = if (manipulators().isEmpty) null else new core.SimLayer {trigger = modifier; maps = manipulators().toMapping()}.build().last
+  function build(parentModifier: (String | List<String>)?): karabiner.Rule? =
+    let (effectiveModifier = modifier ?? parentModifier)
+    if (manipulators().isEmpty || effectiveModifier == null) null
+    else new core.SimLayer {trigger = effectiveModifier; maps = manipulators().toMapping()}.build().last
 }
 
 open class Sequential extends AerospaceMode {
@@ -127,6 +131,16 @@ class Triggers extends AerospaceMode {
 open class AerospaceFeature {
   modifier: (String|List<String>)?
   function rules() = toMap().fold(List(), (acc, k, v) -> if (k == "modifier" || v?.rules() is Null) acc else acc.add(v.rules()))
+  function build(parentModifier: (String | List<String>)?): List<karabiner.Rule> =
+    let (effectiveModifier = modifier ?? parentModifier)
+    toMap().fold(List(), (acc, k, v) ->
+      if (k == "modifier" || v == null) acc
+      else if (v is AerospaceMode)
+        let (rule = v.build(effectiveModifier))
+        if (rule == null) acc else acc.add(rule)
+      else if (v is AerospaceFeature) acc + v.build(effectiveModifier)
+      else acc
+    )
 }
 
 class Window extends AerospaceFeature {
@@ -161,7 +175,7 @@ class Modes extends AerospaceFeature {
 }
 
 class AeroSpace {
-  modifier = null
+  modifier: (String | List<String>)? = null
   cmdPath: String = "/opt/homebrew/bin/aerospace"
 
   window: Window?
@@ -171,5 +185,13 @@ class AeroSpace {
   apps: Apps?
   triggers: Triggers?
 
-  build: List<karabiner.Rule> = List(window, workspace, monitor, modes, apps, triggers).flatMap((f) -> f?.rules() ?? List())
+  build: List<karabiner.Rule> =
+    List(
+      window?.build(modifier),
+      workspace?.build(modifier),
+      monitor?.build(modifier),
+      modes?.build(modifier),
+      apps?.build(modifier),
+      triggers?.build(modifier)
+    ).filterNonNull().flatten()
 }
