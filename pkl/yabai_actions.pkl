@@ -1,0 +1,137 @@
+module yabai_actions
+
+import "karabiner.pkl"
+
+open class YabaiMode {
+  cmdPath = "/opt/homebrew/bin/yabai"
+  command = ""
+  function apply(dir: String) = new karabiner.ToEvent { shell_command = "\(cmdPath) \(command) \(dir)" }
+  hidden action = (a) -> this.apply(a)
+
+}
+open class Sequential extends YabaiMode {
+  prev = apply("prev")
+  next = apply("next")
+  recent = apply("recent")
+  first = apply("first")
+  last = apply("last")
+}
+
+open class Directional extends YabaiMode {
+  east = apply("east")
+  west = apply("west")
+  north = apply("north")
+  south = apply("south")
+  prev = apply("prev")
+  next = apply("next")
+}
+
+open class SwapDirectional extends Directional {
+  first = apply("first")
+  last = apply("last")
+  left = west
+  right = east
+  up = north
+  down = south
+}
+
+open class InsertDirectional extends Directional {
+  left = west
+  right = east
+  up = north
+  down = south
+  stack = apply("stack")
+  cancel = apply("cancel")
+}
+
+open class ResizeMode extends YabaiMode {
+  left = apply("left:-50:0")
+  right = apply("right:50:0")
+  up = apply("top:0:-50")
+  down = apply("bottom:0:50")
+  topLeft = apply("top_left:-50:-50")
+  topRight = apply("top_right:50:-50")
+  bottomLeft = apply("bottom_left:-50:50")
+  bottomRight = apply("bottom_right:50:50")
+  increase = apply("abs:50:50")
+  decrease = apply("abs:-50:-50")
+  equalize = apply("equalize")
+}
+
+open class MoveMode extends YabaiMode {
+  left = apply("rel:-50:0")
+  right = apply("rel:50:0")
+  up = apply("rel:0:-50")
+  down = apply("rel:0:50")
+  center = apply("center")
+}
+
+open class ToggleMode extends YabaiMode {
+  float = apply("float")
+  sticky = apply("sticky")
+  zoom = apply("zoom")
+  fullscreen = apply("fullscreen")
+  nativeFullscreen = apply("native-fullscreen")
+  split = apply("split")
+  minimize = apply("minimize")
+  gap = apply("gap")
+  padding = apply("padding")
+  topmost = apply("topmost")
+  pip = apply("pip")
+  shadow = apply("shadow")
+  border = apply("border")
+}
+
+open class LayoutMode extends YabaiMode {
+  bsp = apply("bsp")
+  float = apply("float")
+  stack = apply("stack")
+}
+
+open class StackSequential extends YabaiMode {
+  prev = apply("prev")
+  next = apply("next")
+  first = apply("first")
+  last = apply("last")
+}
+
+class Space extends YabaiMode {
+    command = "-m space --"
+    focus = new Sequential {command = "-m space --focus"}
+    layout = new LayoutMode {command = "-m space --layout "}
+    balance = apply("balance")
+    rotate = apply("rotate 90")
+    mirrorX = apply("mirror x-axis")
+    mirrorY = apply("mirror y-axis")
+
+}
+
+class Window {
+    focus = new Directional {command = "-m window --focus"}
+    swap = new SwapDirectional {command = "-m window --swap"}
+    warp = new Sequential {command = "-m window --warp"}
+    resize = new ResizeMode {command = "-m window --resize "}
+    move = new MoveMode {command = "-m window --move "}
+    insert = new InsertDirectional {command = "-m window --insert"}
+    space = new Sequential {command = "-m window --space"}
+    display = new Sequential {command = "-m window --display"}
+    toggle = new ToggleMode {command = "-m window --toggle "}
+}
+
+
+class YabaiActions {
+  window: Window = new Window {}
+  
+  space: Space = new Space {}
+  
+  display = new {
+    focus = new Sequential {command = "-m display --focus"}
+  }
+  
+  stack = new {
+    focus = new StackSequential {command = "-m window --focus stack."}
+    swap = new StackSequential {command = "-m window --swap stack."}
+  }
+}
+
+actions = new YabaiActions {}

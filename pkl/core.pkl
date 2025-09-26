@@ -9,6 +9,7 @@ typealias Action = types.Action
 typealias UserInput = String | karabiner.Event
 
 
+
 class Mod {
   mod: List<karabiner.Modifier> | karabiner.Modifier
 }
@@ -78,7 +79,7 @@ open class SimLayer extends types.BaseLayer  {
 
     trigger: String
     layerName: String = "\(trigger)-layer"
-    hidden maps: Mapping<String, karabiner.ToEvent> = new Mapping {}
+    hidden maps: Mapping<String, Action> = new Mapping {}
     
     function build(): List<karabiner.Rule> = 
       let (self = this)

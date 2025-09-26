@@ -3,7 +3,11 @@ import "karabiner.pkl"
 
 import "keys.pkl" as keys
 
-typealias Action = String | karabiner.Event | List<String|karabiner.Event>
+// typealias Action = String | karabiner.Event | List<String|karabiner.Event>
+typealias Action = String | karabiner.Event 
+
+
+
 
 
 

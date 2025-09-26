@@ -2,21 +2,24 @@ module yabai
 
 import "karabiner.pkl"
 import "core.pkl"
+import "yabai_actions.pkl"
+
+
 
 
 cmdPath = "/opt/homebrew/bin/yabai"
 
-open class YabaiMode {
-  cmdPath = "/opt/homebrew/bin/yabai"
-  actions = List("west", "south", "north", "east", "recent", "prev", "next", "first", "last")
-  modifier: (List<karabiner.Modifier> | karabiner.Modifier | String)?
-  mappings: Mapping<String, core.UserInput> = new Mapping {}
-  // mod: List<karabiner.Modifier> | karabiner.Modifier | String = modifier ?? super.mod
-  action_cmd: String
-  ignore = List("manipulators", "defined", "rules", "modifier", "mod", "action_cmd", "actions", "cmdPath", "ignore", "mappings")
-  // mod: List<String?>? | String?  | Dynamic = trace(modifier) ?? trace(super.mod)
 
-  function manipulators() = defined().entries.toMap((entry) -> if (entry.value is karabiner.Event) entry.value.key_code else entry.value, (entry) -> core.shell("\(cmdPath) \(action_cmd) \(entry.key)").single)
+open class YabaiMode {
+  hidden ya: yabai_actions.YabaiActions = new yabai_actions.YabaiActions {}
+  hidden actions = List("west", "south", "north", "east", "recent", "prev", "next", "first", "last")
+  hidden modifier: (List<karabiner.Modifier> | karabiner.Modifier | String)?
+  hidden mappings: Mapping<String, core.UserInput> = new Mapping {}
+  hidden actionProvider: ((String) -> karabiner.ToEvent)
+  hidden ignore = List("manipulators", "defined", "rules", "modifier", "mod", "actions", "ignore", "mappings", "actionProvider", "ya")
+
+  function manipulators(): Map<String, core.Action>  = 
+    defined().entries.toMap((entry) -> if (entry.value is String) entry.value else entry.value.key_code , (entry) -> actionProvider.apply(entry.key))
   function defined() = toMap().filter((key, val) -> !(ignore.contains(key) || val is Null)) + this.mappings.toMap()
   function rules() = if (manipulators().isEmpty) null else new core.SimLayer {trigger = modifier; maps = manipulators().toMapping()}.build().last
   function build(parentModifier: (String | List<String>)?): karabiner.Rule? = 
@@ -42,21 +45,25 @@ open class Directional extends YabaiMode {
   next: String?
 }
 
+open class DirectionalAction extends Directional {
+
+}
+
 class WindowFocus extends Directional {
   mouse: String?
-  action_cmd = "-m window --focus"
+  actionProvider =  ya.window.focus.action
 }
 
 class WindowSwap extends Directional {
-  action_cmd = "-m window --swap"
+  actionProvider = ya.window.swap.action
 }
 
 class WindowWarp extends Sequential {
-  action_cmd = "-m window --warp"
+  actionProvider =  ya.window.swap.action
 }
 
 class WindowResize extends Directional{
-  action_cmd = "-m window --resize"
+  actionProvider =  ya.window.swap.action
   left: String?
   down: String?
   up: String?
@@ -72,7 +79,7 @@ class WindowResize extends Directional{
 }
 
 class WindowMoveFloat extends YabaiMode {
-  action_cmd = "-m window --move"
+  actionProvider =  ya.window.move.action
   left: String?
   down: String?
   up: String?
@@ -82,22 +89,22 @@ class WindowMoveFloat extends YabaiMode {
 }
 
 class WindowInsert extends Directional{
-  action_cmd = "-m window --insert"
+  actionProvider =  ya.window.swap.action
   stack: String?
   cancel: String?
 
 }
 
 class SpaceFocus extends Sequential {
-  action_cmd = "-m space --focus"
+  actionProvider = ya.space.focus.action
 }
 
 class SpaceMove extends Sequential {
-  action_cmd = "-m window --space"
+  actionProvider =  ya.window.swap.action
 }
 
 class SpaceLayout extends YabaiMode {
-  action_cmd = "-m space --layout"
+  actionProvider =  ya.window.swap.action
   bsp: String?
   float: String?
   stack: String?
@@ -108,19 +115,19 @@ class SpaceLayout extends YabaiMode {
 }
 
 class DisplayFocus extends Sequential {
-  action_cmd = "-m display --focus"
+  actionProvider =  ya.window.swap.action
 }
 
 class DisplayMove extends Sequential {
-  action_cmd = "-m window --display"
+  actionProvider = (target) -> ya.display
 }
 
 class StackFocus extends Sequential {
-  action_cmd = "-m window --focus stack"
+  actionProvider =  ya.stack.focus.action
 }
 
 class StackSwap extends Sequential {
-  action_cmd = "-m window --swap stack"
+  actionProvider =  ya.stack.swap.action
 }
 
 
@@ -161,7 +168,7 @@ class Display extends YabaiFeature {
 }
 
 class Toggles extends YabaiMode{
-  action_cmd = "-m window --toggle"
+  actionProvider = (prop) -> ya.window.toggle.getProperty(prop)
   float: String?
   sticky: String?
   zoom: String?
@@ -176,15 +183,7 @@ class Toggles extends YabaiMode{
   shadow: String?
   border: String?
   
-  function build(parentModifier: (String | List<String>)?): karabiner.Rule? = 
-    let (effectiveModifier = modifier ?? parentModifier)
-    let (toggleMappings = defined().entries.toMap(
-      (entry) -> entry.value,
-      (entry) -> core.shell("\(cmdPath) -m window --toggle \(entry.key)").single
-    ))
-    if (toggleMappings.isEmpty || effectiveModifier == null) null
-    else new core.SimLayer {trigger = effectiveModifier; maps = toggleMappings.toMapping()}.build().last
-}
+  }
 
 class Stack extends YabaiFeature {
   focus: StackFocus?
@@ -194,7 +193,6 @@ class Stack extends YabaiFeature {
 class Yabai {
   modifier: (String | List<String>)? = null
   mod = modifier ?? ""
-  cmdPath: String = "/opt/homebrew/bin/yabai"
 
   window: Window?
   space: Space?
