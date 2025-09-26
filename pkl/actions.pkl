@@ -2,9 +2,11 @@ module actions
 
 import "karabiner.pkl"
 import "yabai_actions.pkl"
+import "aerospace_actions.pkl"
 
 class Actions {
   yabai = yabai_actions.actions
+  aerospace = aerospace_actions.actions
   
   function launchApp(appName: String): karabiner.ToEvent = new karabiner.ToEvent {
     shell_command = "open -a \"\(appName)\""

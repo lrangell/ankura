@@ -1,0 +1,155 @@
+module aerospace_actions
+
+import "karabiner.pkl"
+
+open class AerospaceMode {
+  cmdPath = "/opt/homebrew/bin/aerospace"
+  command = ""
+  function apply(arg: String) = new karabiner.ToEvent { shell_command = "\(cmdPath) \(command) \(arg)" }
+  hidden action = (a) -> this.apply(a)
+}
+
+open class Sequential extends AerospaceMode {
+  prev = apply("prev")
+  next = apply("next")
+  first = apply("first")
+  last = apply("last")
+}
+
+open class Directional extends AerospaceMode {
+  left = apply("left")
+  down = apply("down")
+  up = apply("up")
+  right = apply("right")
+  prev = apply("prev")
+  next = apply("next")
+}
+
+open class WindowFocusMode extends Directional {
+  command = "focus"
+  dfsNext = apply("--dfs-index next")
+  dfsPrev = apply("--dfs-index prev")
+}
+
+open class WindowMoveMode extends Directional {
+  command = "move"
+}
+
+open class WindowResizeMode extends AerospaceMode {
+  command = "resize"
+  width = apply("width 100")
+  height = apply("height 100")
+  smart = apply("smart 100")
+  smartOpposite = apply("smart -100")
+}
+
+open class WindowLayoutMode extends AerospaceMode {
+  command = "layout"
+  tiling = apply("tiling")
+  floating = apply("floating")
+  hTiles = apply("h_tiles")
+  vTiles = apply("v_tiles")
+  fullscreen = apply("fullscreen")
+}
+
+open class WindowJoinMode extends Directional {
+  command = "join-with"
+}
+
+open class WindowCloseMode extends AerospaceMode {
+  command = "close"
+  current = apply("")
+  allButCurrent = apply("--quit-if-last-window")
+}
+
+open class WindowNativeMode extends AerospaceMode {
+  command = "macos-native-"
+  minimize = apply("minimize")
+  fullscreen = apply("fullscreen")
+}
+
+open class WorkspaceFocusMode extends Sequential {
+  command = "workspace"
+  recent = new karabiner.ToEvent { shell_command = "/opt/homebrew/bin/aerospace workspace-back-and-forth" }
+}
+
+open class WorkspaceMoveMode extends Sequential {
+  command = "move-node-to-workspace --focus-follows-window"
+}
+
+open class WorkspaceSummonMode extends Sequential {
+  command = "summon-workspace"
+}
+
+open class WorkspaceTreeMode extends AerospaceMode {
+  command = ""
+  flatten = apply("flatten-workspace-tree")
+  accordion = apply("accordion-padding-workspace-tree")
+}
+
+open class MonitorFocusMode extends Sequential {
+  command = "focus-monitor"
+}
+
+open class MonitorMoveMode extends Sequential {
+  command = "move-node-to-monitor --focus-follows-window"
+}
+
+open class ModeBindingsMode extends AerospaceMode {
+  command = "mode"
+}
+
+open class AppsMode extends AerospaceMode {
+  command = "exec-and-forget"
+}
+
+open class TriggersMode extends AerospaceMode {
+  command = "trigger-binding"
+}
+
+class Window {
+  focus = new WindowFocusMode {}
+  move = new WindowMoveMode {}
+  resize = new WindowResizeMode {}
+  layout = new WindowLayoutMode {}
+  join = new WindowJoinMode {}
+  close = new WindowCloseMode {}
+  native = new WindowNativeMode {}
+}
+
+class Workspace {
+  focus = new WorkspaceFocusMode {}
+  move = new WorkspaceMoveMode {}
+  summon = new WorkspaceSummonMode {}
+  tree = new WorkspaceTreeMode {}
+}
+
+class Monitor {
+  focus = new MonitorFocusMode {}
+  move = new MonitorMoveMode {}
+}
+
+class Modes {
+  resize = new ModeBindingsMode {}
+  layout = new ModeBindingsMode {}
+  service = new ModeBindingsMode {}
+}
+
+class Apps {
+  launcher = new AppsMode {}
+}
+
+class Triggers {
+  macros = new TriggersMode {}
+}
+
+class AerospaceActions {
+  window: Window = new Window {}
+  workspace: Workspace = new Workspace {}
+  monitor: Monitor = new Monitor {}
+  modes: Modes = new Modes {}
+  apps: Apps = new Apps {}
+  triggers: Triggers = new Triggers {}
+}
+
+actions = new AerospaceActions {}

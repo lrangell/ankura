@@ -2,130 +2,133 @@ module aerospace
 
 import "karabiner.pkl"
 import "core.pkl"
+import "aerospace_actions.pkl"
 
 cmdPath = "/opt/homebrew/bin/aerospace"
 
 open class AerospaceMode {
-  cmdPath = "/opt/homebrew/bin/aerospace"
-  modifier: (List<karabiner.Modifier> | karabiner.Modifier | String)?
-  mappings: Mapping<String, core.UserInput> = new Mapping {}
-  action_cmd: String
-  ignore = List("manipulators", "defined", "rules", "modifier", "action_cmd", "cmdPath", "ignore", "mappings", "focusShouldFollow")
+  hidden ae: aerospace_actions.AerospaceActions = new aerospace_actions.AerospaceActions {}
+  hidden actions = List("left", "down", "up", "right", "prev", "next", "first", "last")
+  hidden modifier: (List<karabiner.Modifier> | karabiner.Modifier | String)?
+  hidden mappings: Mapping<String, core.UserInput> = new Mapping {}
+  hidden actionProvider: ((String) -> karabiner.ToEvent)
+  hidden ignore = List("manipulators", "defined", "rules", "modifier", "actions", "ignore", "mappings", "actionProvider", "ae", "focusShouldFollow")
 
-  function manipulators() = defined().entries.toMap((entry) -> if (entry.value is karabiner.Event) entry.value.key_code else entry.value, (entry) -> core.shell("\(cmdPath) \(action_cmd) \(entry.key)").single)
+  function manipulators(): Map<String, core.Action> = 
+    defined().entries.toMap((entry) -> if (entry.value is String) entry.value else entry.value.key_code , (entry) -> actionProvider.apply(entry.key))
   function defined() = toMap().filter((key, val) -> !(ignore.contains(key) || val is Null)) + this.mappings.toMap()
   function rules() = if (manipulators().isEmpty) null else new core.SimLayer {trigger = modifier; maps = manipulators().toMapping()}.build().last
-  function build(parentModifier: (String | List<String>)?): karabiner.Rule? =
+  function build(parentModifier: (String | List<String>)?): karabiner.Rule? = 
     let (effectiveModifier = modifier ?? parentModifier)
     if (manipulators().isEmpty || effectiveModifier == null) null
     else new core.SimLayer {trigger = effectiveModifier; maps = manipulators().toMapping()}.build().last
 }
 
 open class Sequential extends AerospaceMode {
-  prev: String?
-  next: String?
-  first: String?
-  last: String?
+  prev: core.UserInput?
+  next: core.UserInput?
+  first: core.UserInput?
+  last: core.UserInput?
 }
 
 open class Directional extends AerospaceMode {
-  left: String?
-  down: String?
-  up: String?
-  right: String?
-  prev: String?
-  next: String?
+  left: core.UserInput?
+  down: core.UserInput?
+  up: core.UserInput?
+  right: core.UserInput?
+  prev: core.UserInput?
+  next: core.UserInput?
 }
 
 class WindowFocus extends Directional {
-  action_cmd = "focus"
-  dfsNext: String?
-  dfsPrev: String?
+  dfsNext: core.UserInput?
+  dfsPrev: core.UserInput?
+  actionProvider = ae.window.focus.action
 }
 
 class WindowMove extends Directional {
-  action_cmd = "move"
+  actionProvider = ae.window.move.action
 }
 
 class WindowResize extends AerospaceMode {
-  action_cmd = "resize"
-  width: String?
-  height: String?
-  smart: String?
-  smartOpposite: String?
+  width: core.UserInput?
+  height: core.UserInput?
+  smart: core.UserInput?
+  smartOpposite: core.UserInput?
   amount: Int = 100
+  actionProvider = ae.window.resize.action
 }
 
 class WindowLayout extends AerospaceMode {
-  action_cmd = "layout"
-  tiling: String?
-  floating: String?
-  hTiles: String?
-  vTiles: String?
-  fullscreen: String?
+  tiling: core.UserInput?
+  floating: core.UserInput?
+  hTiles: core.UserInput?
+  vTiles: core.UserInput?
+  fullscreen: core.UserInput?
+  actionProvider = ae.window.layout.action
 }
 
 class WindowJoin extends Directional {
-  action_cmd = "join-with"
+  actionProvider = ae.window.join.action
 }
 
 class WindowClose extends AerospaceMode {
-  action_cmd = "close"
-  current: String?
-  allButCurrent: String?
+  current: core.UserInput?
+  allButCurrent: core.UserInput?
+  actionProvider = ae.window.close.action
 }
 
 class WindowNative extends AerospaceMode {
-  action_cmd = "macos-native-"
-  minimize: String?
-  fullscreen: String?
+  minimize: core.UserInput?
+  fullscreen: core.UserInput?
+  actionProvider = ae.window.native.action
 }
 
 class WorkspaceFocus extends Sequential {
-  action_cmd = "workspace"
+  actionProvider = ae.workspace.focus.action
 }
 
 class WorkspaceMove extends Sequential {
   focusShouldFollow = true
-  action_cmd = if (focusShouldFollow) "move-node-to-workspace --focus-follows-window" else "move-node-to-workspace"
+  actionProvider = ae.workspace.move.action
 }
 
 class WorkspaceSummon extends Sequential {
-  action_cmd = "summon-workspace"
+  actionProvider = ae.workspace.summon.action
 }
 
 class WorkspaceTree extends AerospaceMode {
-  action_cmd = ""
-  flatten: String?
-  accordion: String?
+  flatten: core.UserInput?
+  accordion: core.UserInput?
+  actionProvider = ae.workspace.tree.action
 }
 
 class MonitorFocus extends Sequential {
-  action_cmd = "focus-monitor"
+  actionProvider = ae.monitor.focus.action
 }
 
 class MonitorMove extends Sequential {
   focusShouldFollow = true
-  action_cmd = if (focusShouldFollow) "move-node-to-monitor --focus-follows-window" else "move-node-to-monitor"
+  actionProvider = ae.monitor.move.action
 }
 
 class ModeBindings extends AerospaceMode {
-  action_cmd = "mode"
-  trigger: String?
+  trigger: core.UserInput?
   bindings: Mapping<String, String> = new Mapping {}
   exitKey: String = "escape"
+  actionProvider = ae.modes.resize.action
 }
 
 class Apps extends AerospaceMode {
-  action_cmd = "exec-and-forget"
   launchers: Mapping<String, String> = new Mapping {}
+  actionProvider = ae.apps.launcher.action
 }
 
 
 
 class Triggers extends AerospaceMode {
-  action_cmd = "trigger-binding"
   macros: Mapping<String, List<String>> = new Mapping {}
+  actionProvider = ae.triggers.macros.action
 }
 
 open class AerospaceFeature {
