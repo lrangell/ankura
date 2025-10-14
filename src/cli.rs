@@ -10,20 +10,13 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::time::Duration;
+use tokio::signal::unix::{signal, SignalKind};
 use tokio::time::sleep;
 use tracing::{info, warn};
 
-#[cfg(unix)]
-use tokio::signal::unix::{signal, SignalKind};
-
-#[cfg(unix)]
 use libc::{self, c_int, pid_t, EPERM, ESRCH, SIGTERM};
 
-#[cfg(unix)]
 type ProcessId = pid_t;
-
-#[cfg(not(unix))]
-type ProcessId = u32;
 
 #[derive(Parser)]
 #[command(name = "ankura")]
@@ -257,7 +250,6 @@ fn read_pid(path: &Path) -> Result<Option<ProcessId>> {
     Ok(Some(pid))
 }
 
-#[cfg(unix)]
 async fn terminate_process(pid: ProcessId) -> Result<()> {
     send_signal(pid, SIGTERM)?;
 
@@ -273,12 +265,6 @@ async fn terminate_process(pid: ProcessId) -> Result<()> {
     })
 }
 
-#[cfg(not(unix))]
-async fn terminate_process(_pid: ProcessId) -> Result<()> {
-    Ok(())
-}
-
-#[cfg(unix)]
 fn process_is_running(pid: ProcessId) -> bool {
     let result = unsafe { libc::kill(pid, 0) };
     if result == 0 {
@@ -292,12 +278,6 @@ fn process_is_running(pid: ProcessId) -> bool {
     }
 }
 
-#[cfg(not(unix))]
-fn process_is_running(_pid: ProcessId) -> bool {
-    false
-}
-
-#[cfg(unix)]
 fn send_signal(pid: ProcessId, signal: c_int) -> Result<()> {
     let result = unsafe { libc::kill(pid, signal) };
     if result == 0 {
@@ -312,7 +292,6 @@ fn send_signal(pid: ProcessId, signal: c_int) -> Result<()> {
     }
 }
 
-#[cfg(unix)]
 async fn wait_for_shutdown_signal() -> Result<()> {
     let mut sigterm =
         signal(SignalKind::terminate()).map_err(|e| KarabinerPklError::DaemonError {
@@ -334,16 +313,6 @@ async fn wait_for_shutdown_signal() -> Result<()> {
         _ = sigint.recv() => {}
     }
 
-    Ok(())
-}
-
-#[cfg(not(unix))]
-async fn wait_for_shutdown_signal() -> Result<()> {
-    tokio::signal::ctrl_c()
-        .await
-        .map_err(|e| KarabinerPklError::DaemonError {
-            message: format!("Failed to listen for shutdown signal: {e}"),
-        })?;
     Ok(())
 }
 
