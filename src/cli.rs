@@ -372,17 +372,21 @@ pub async fn stop_daemon() -> Result<()> {
             info!("Stopping ankura daemon (pid {pid})");
             terminate_process(pid).await?;
             if let Err(e) = fs::remove_file(&pid_path) {
-                warn!("Failed to remove pid file {}: {e}", pid_path.display());
+                if e.kind() != io::ErrorKind::NotFound {
+                    warn!("Failed to remove pid file {}: {e}", pid_path.display());
+                }
             }
             println!("Daemon stopped");
         }
         Some(pid) => {
             warn!("Found stale ankura pid file pointing to pid {pid}, removing it");
             if let Err(e) = fs::remove_file(&pid_path) {
-                warn!(
-                    "Failed to remove stale pid file {}: {e}",
-                    pid_path.display()
-                );
+                if e.kind() != io::ErrorKind::NotFound {
+                    warn!(
+                        "Failed to remove stale pid file {}: {e}",
+                        pid_path.display()
+                    );
+                }
             }
             println!("Daemon is not running");
         }
