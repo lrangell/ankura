@@ -42,8 +42,7 @@ pub fn init_logging(
         .with(EnvFilter::try_from_default_env().unwrap_or_else(|_| {
             let default_level = if debug_log { "debug" } else { "info" };
             let directives = format!(
-                "ankura={level},notify=warn,notify_debouncer_mini=warn",
-                level = default_level
+                "ankura={default_level},notify=warn,notify_debouncer_mini=warn"
             );
             EnvFilter::new(directives)
         }))

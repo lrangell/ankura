@@ -85,7 +85,7 @@ impl Daemon {
                                 event
                                     .path
                                     .file_name()
-                                    .map_or(false, |name| name == file_name)
+                                    .is_some_and(|name| name == file_name)
                             } else {
                                 event.path == config_path
                             };
