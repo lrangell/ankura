@@ -542,7 +542,7 @@ pub fn merge_configurations(existing_path: &Path, new_config: Value) -> Result<V
     let mut existing_config: Value = serde_json::from_str(&existing_content)
         .map_err(|e| KarabinerPklError::JsonParseError { source: e })?;
 
-    let new_profile = new_config["profiles"][0].clone();
+    let mut new_profile = new_config["profiles"][0].clone();
     let target_profile_name = new_profile["name"].as_str().unwrap_or("pkl");
 
     if !existing_config
@@ -560,6 +560,13 @@ pub fn merge_configurations(existing_path: &Path, new_config: Value) -> Result<V
         .position(|p| p["name"].as_str() == Some(target_profile_name));
 
     if let Some(index) = existing_profile_index {
+        if let Some(selected) = profiles
+            .get(index)
+            .and_then(|profile| profile.get("selected"))
+            .and_then(|value| value.as_bool())
+        {
+            new_profile["selected"] = serde_json::Value::Bool(selected);
+        }
         profiles[index] = new_profile;
     } else {
         profiles.push(new_profile);
