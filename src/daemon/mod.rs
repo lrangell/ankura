@@ -1,9 +1,10 @@
 use crate::cli::{merge_configurations, write_karabiner_config};
 use crate::compiler::Compiler;
 use crate::error::{KarabinerPklError, Result};
-use notify::RecursiveMode;
-use notify_debouncer_mini::{new_debouncer, DebouncedEventKind};
+use notify::{RecommendedWatcher, RecursiveMode};
+use notify_debouncer_mini::{new_debouncer, DebouncedEventKind, Debouncer};
 use notify_rust::{Notification, Timeout};
+use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
@@ -15,6 +16,7 @@ pub struct Daemon {
     compiler: Arc<Compiler>,
     notification_manager: Arc<NotificationManager>,
     is_running: Arc<RwLock<bool>>,
+    watcher: Arc<RwLock<Option<Debouncer<RecommendedWatcher>>>>,
 }
 
 impl Daemon {
@@ -27,6 +29,7 @@ impl Daemon {
             compiler,
             notification_manager,
             is_running: Arc::new(RwLock::new(false)),
+            watcher: Arc::new(RwLock::new(None)),
         })
     }
 
@@ -47,7 +50,7 @@ impl Daemon {
         self.compile_and_notify(None).await;
 
         let (tx, rx) = std::sync::mpsc::channel();
-        let mut debouncer = new_debouncer(Duration::from_millis(300), tx)
+        let mut debouncer = new_debouncer(Duration::from_secs(5), tx)
             .map_err(|e| KarabinerPklError::WatchError { source: e })?;
 
         let config_dir = self.config_path.parent().unwrap_or(&self.config_path);
@@ -56,28 +59,44 @@ impl Daemon {
             .watch(config_dir, RecursiveMode::Recursive)
             .map_err(|e| KarabinerPklError::WatchError { source: e })?;
 
+        {
+            let mut watcher_guard = self.watcher.write().await;
+            *watcher_guard = Some(debouncer);
+        }
+
         let compiler = self.compiler.clone();
         let notification_manager = self.notification_manager.clone();
         let config_path = self.config_path.clone();
         let is_running = self.is_running.clone();
+        let config_file_name = config_path.file_name().map(OsString::from);
+        let watcher = self.watcher.clone();
 
         tokio::spawn(async move {
             loop {
                 match rx.recv() {
                     Ok(Ok(events)) => {
-                        for event in events {
-                            if event.kind == DebouncedEventKind::Any
-                                && event.path.ends_with("karabiner.pkl")
-                            {
-                                info!("Configuration file changed, recompiling...");
-                                Self::compile_with_notification(
-                                    &compiler,
-                                    &notification_manager,
-                                    &config_path,
-                                    None,
-                                )
-                                .await;
-                            }
+                        let should_compile = events.iter().any(|event| {
+                            let is_target = if let Some(file_name) = &config_file_name {
+                                event
+                                    .path
+                                    .file_name()
+                                    .map_or(false, |name| name == file_name)
+                            } else {
+                                event.path == config_path
+                            };
+                            let is_settled = event.kind == DebouncedEventKind::Any;
+                            is_target && is_settled
+                        });
+
+                        if should_compile {
+                            info!("Configuration file changed, recompiling...");
+                            Self::compile_with_notification(
+                                &compiler,
+                                &notification_manager,
+                                &config_path,
+                                None,
+                            )
+                            .await;
                         }
                     }
                     Ok(Err(e)) => {
@@ -85,6 +104,7 @@ impl Daemon {
                     }
                     Err(e) => {
                         error!("Channel receive error: {:?}", e);
+                        break;
                     }
                 }
 
@@ -92,6 +112,9 @@ impl Daemon {
                     break;
                 }
             }
+
+            let mut watcher_guard = watcher.write().await;
+            watcher_guard.take();
         });
 
         info!("Daemon started successfully");
@@ -102,6 +125,8 @@ impl Daemon {
         info!("Stopping ankura daemon");
         let mut is_running = self.is_running.write().await;
         *is_running = false;
+        let mut watcher_guard = self.watcher.write().await;
+        watcher_guard.take();
         Ok(())
     }
 
