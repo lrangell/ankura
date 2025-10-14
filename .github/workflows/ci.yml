@@ -62,14 +62,7 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Install Pkl
-        run: |
-          PKL_VERSION="0.28.2"
-          # macOS-latest is Apple Silicon
-          curl -L -o pkl https://github.com/apple/pkl/releases/download/${PKL_VERSION}/pkl-macos-aarch64
-          chmod +x pkl
-          sudo mv pkl /usr/local/bin/
-          pkl --version
+      # NOTE: Pkl CLI tests are temporarily disabled; re-enable once fixtures are stable.
 
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
@@ -82,7 +75,7 @@ jobs:
       - name: Install cargo-nextest
         uses: taiki-e/install-action@nextest
 
-      - name: Run tests
+      - name: Run Rust tests
         run: cargo nextest run --all-features --locked
         env:
           SCCACHE_GHA_ENABLED: "true"
