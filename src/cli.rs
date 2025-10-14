@@ -4,8 +4,26 @@ use crate::error::{KarabinerPklError, Result};
 use crate::import;
 use clap::{Parser, Subcommand};
 use serde_json::Value;
+use std::convert::TryInto;
+use std::fs;
+use std::io;
 use std::path::{Path, PathBuf};
-use tracing::info;
+use std::process::{Command, Stdio};
+use std::time::Duration;
+use tokio::time::sleep;
+use tracing::{info, warn};
+
+#[cfg(unix)]
+use tokio::signal::unix::{signal, SignalKind};
+
+#[cfg(unix)]
+use libc::{self, c_int, pid_t, EPERM, ESRCH, SIGTERM};
+
+#[cfg(unix)]
+type ProcessId = pid_t;
+
+#[cfg(not(unix))]
+type ProcessId = u32;
 
 #[derive(Parser)]
 #[command(name = "ankura")]
@@ -24,8 +42,8 @@ pub struct Cli {
 #[derive(Subcommand)]
 pub enum Commands {
     Start {
-        #[arg(short, long)]
-        foreground: bool,
+        #[arg(long, hide = true)]
+        daemon_mode: bool,
     },
 
     Stop,
@@ -76,21 +94,303 @@ pub enum Commands {
     },
 }
 
-pub async fn start_daemon(config_path: PathBuf, foreground: bool) -> Result<()> {
-    let daemon = Daemon::new(config_path)?;
-    daemon.start().await?;
+pub async fn start_daemon(config_path: PathBuf, daemon_mode: bool) -> Result<()> {
+    if daemon_mode {
+        run_daemon(config_path).await
+    } else {
+        spawn_daemon(config_path).await
+    }
+}
 
-    if foreground {
-        tokio::signal::ctrl_c().await.unwrap();
-        daemon.stop().await?;
+async fn spawn_daemon(config_path: PathBuf) -> Result<()> {
+    let pid_path = daemon_pid_file()?;
+
+    if let Some(existing_pid) = read_pid(&pid_path)? {
+        if process_is_running(existing_pid) {
+            info!("Existing ankura daemon detected (pid {existing_pid}), attempting to stop it");
+            terminate_process(existing_pid).await?;
+        } else {
+            warn!("Removing stale ankura daemon pid file referencing pid {existing_pid}");
+        }
+
+        if let Err(e) = fs::remove_file(&pid_path) {
+            if e.kind() != io::ErrorKind::NotFound {
+                warn!("Failed to remove old pid file {}: {e}", pid_path.display());
+            }
+        }
+    }
+
+    let exe_path = std::env::current_exe().map_err(|e| KarabinerPklError::DaemonError {
+        message: format!("Failed to resolve ankura executable: {e}"),
+    })?;
+
+    let config_arg = config_path.to_str().map(|s| s.to_string()).ok_or_else(|| {
+        KarabinerPklError::DaemonError {
+            message: format!(
+                "Config path contains invalid UTF-8: {}",
+                config_path.display()
+            ),
+        }
+    })?;
+
+    let mut command = Command::new(exe_path);
+    command
+        .arg("--config")
+        .arg(&config_arg)
+        .arg("start")
+        .arg("--daemon-mode")
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+
+    let child = command
+        .spawn()
+        .map_err(|e| KarabinerPklError::DaemonError {
+            message: format!("Failed to spawn ankura daemon: {e}"),
+        })?;
+
+    info!("Started ankura daemon with pid {}", child.id());
+
+    // Give the daemon a brief moment to write the PID file so that status commands can read it.
+    for _ in 0..20 {
+        if pid_path.exists() {
+            info!("Daemon pid file created at {}", pid_path.display());
+            return Ok(());
+        }
+        sleep(Duration::from_millis(50)).await;
+    }
+
+    warn!(
+        "Daemon pid file was not created within the expected time at {}",
+        pid_path.display()
+    );
+
+    Ok(())
+}
+
+struct PidFileGuard {
+    path: PathBuf,
+}
+
+impl PidFileGuard {
+    fn claim(path: &Path) -> Result<Self> {
+        fs::write(path, format!("{}", std::process::id())).map_err(|e| {
+            KarabinerPklError::DaemonError {
+                message: format!("Failed to write daemon pid file {}: {e}", path.display()),
+            }
+        })?;
+
+        Ok(Self {
+            path: path.to_path_buf(),
+        })
+    }
+}
+
+impl Drop for PidFileGuard {
+    fn drop(&mut self) {
+        if let Err(e) = fs::remove_file(&self.path) {
+            if e.kind() == io::ErrorKind::NotFound {
+                return;
+            }
+            warn!(
+                "Failed to remove daemon pid file {}: {e}",
+                self.path.display()
+            );
+        }
+    }
+}
+
+fn daemon_pid_file() -> Result<PathBuf> {
+    let runtime_dir = homebrew_var_dir()?.join("run");
+    fs::create_dir_all(&runtime_dir).map_err(|e| KarabinerPklError::DaemonError {
+        message: format!(
+            "Failed to create runtime directory {}: {e}",
+            runtime_dir.display()
+        ),
+    })?;
+
+    Ok(runtime_dir.join("ankura.pid"))
+}
+
+fn homebrew_var_dir() -> Result<PathBuf> {
+    if let Some(prefix) = std::env::var_os("HOMEBREW_PREFIX") {
+        let path = PathBuf::from(prefix).join("var");
+        return Ok(path);
+    }
+
+    for candidate in ["/opt/homebrew", "/usr/local"] {
+        let path = PathBuf::from(candidate).join("var");
+        if path.exists() {
+            return Ok(path);
+        }
+    }
+
+    Ok(PathBuf::from("/opt/homebrew/var"))
+}
+
+fn read_pid(path: &Path) -> Result<Option<ProcessId>> {
+    if !path.exists() {
+        return Ok(None);
+    }
+
+    let contents = fs::read_to_string(path).map_err(|e| KarabinerPklError::DaemonError {
+        message: format!("Failed to read daemon pid file {}: {e}", path.display()),
+    })?;
+
+    let trimmed = contents.trim();
+    if trimmed.is_empty() {
+        return Ok(None);
+    }
+
+    let raw_value: i64 = trimmed
+        .parse()
+        .map_err(|e| KarabinerPklError::DaemonError {
+            message: format!("Invalid pid value '{trimmed}' in {}: {e}", path.display()),
+        })?;
+
+    let pid = raw_value
+        .try_into()
+        .map_err(|_| KarabinerPklError::DaemonError {
+            message: format!("Pid value {raw_value} does not fit in platform pid type"),
+        })?;
+
+    Ok(Some(pid))
+}
+
+#[cfg(unix)]
+async fn terminate_process(pid: ProcessId) -> Result<()> {
+    send_signal(pid, SIGTERM)?;
+
+    for _ in 0..50 {
+        if !process_is_running(pid) {
+            return Ok(());
+        }
+        sleep(Duration::from_millis(100)).await;
+    }
+
+    Err(KarabinerPklError::DaemonError {
+        message: format!("Timed out waiting for daemon (pid {pid}) to exit"),
+    })
+}
+
+#[cfg(not(unix))]
+async fn terminate_process(_pid: ProcessId) -> Result<()> {
+    Ok(())
+}
+
+#[cfg(unix)]
+fn process_is_running(pid: ProcessId) -> bool {
+    let result = unsafe { libc::kill(pid, 0) };
+    if result == 0 {
+        true
+    } else {
+        match io::Error::last_os_error().raw_os_error() {
+            Some(EPERM) => true,
+            Some(ESRCH) => false,
+            _ => false,
+        }
+    }
+}
+
+#[cfg(not(unix))]
+fn process_is_running(_pid: ProcessId) -> bool {
+    false
+}
+
+#[cfg(unix)]
+fn send_signal(pid: ProcessId, signal: c_int) -> Result<()> {
+    let result = unsafe { libc::kill(pid, signal) };
+    if result == 0 {
+        Ok(())
+    } else {
+        Err(KarabinerPklError::DaemonError {
+            message: format!(
+                "Failed to send signal {signal} to pid {pid}: {}",
+                io::Error::last_os_error()
+            ),
+        })
+    }
+}
+
+#[cfg(unix)]
+async fn wait_for_shutdown_signal() -> Result<()> {
+    let mut sigterm =
+        signal(SignalKind::terminate()).map_err(|e| KarabinerPklError::DaemonError {
+            message: format!("Failed to listen for SIGTERM: {e}"),
+        })?;
+
+    let mut sigint =
+        signal(SignalKind::interrupt()).map_err(|e| KarabinerPklError::DaemonError {
+            message: format!("Failed to listen for SIGINT: {e}"),
+        })?;
+
+    tokio::select! {
+        res = tokio::signal::ctrl_c() => {
+            res.map_err(|e| KarabinerPklError::DaemonError {
+                message: format!("Failed to listen for Ctrl+C: {e}"),
+            })?;
+        }
+        _ = sigterm.recv() => {}
+        _ = sigint.recv() => {}
     }
 
     Ok(())
 }
 
+#[cfg(not(unix))]
+async fn wait_for_shutdown_signal() -> Result<()> {
+    tokio::signal::ctrl_c()
+        .await
+        .map_err(|e| KarabinerPklError::DaemonError {
+            message: format!("Failed to listen for shutdown signal: {e}"),
+        })?;
+    Ok(())
+}
+
+async fn run_daemon(config_path: PathBuf) -> Result<()> {
+    let pid_path = daemon_pid_file()?;
+    let _pid_guard = PidFileGuard::claim(&pid_path)?;
+
+    let daemon = Daemon::new(config_path)?;
+    daemon.start().await?;
+
+    info!("Ankura daemon is running (pid {})", std::process::id());
+
+    wait_for_shutdown_signal().await?;
+
+    info!("Shutdown signal received, stopping ankura daemon");
+    daemon.stop().await?;
+
+    Ok(())
+}
+
 pub async fn stop_daemon() -> Result<()> {
-    info!("Stopping ankura daemon");
-    println!("Daemon stopped");
+    let pid_path = daemon_pid_file()?;
+
+    match read_pid(&pid_path)? {
+        Some(pid) if process_is_running(pid) => {
+            info!("Stopping ankura daemon (pid {pid})");
+            terminate_process(pid).await?;
+            if let Err(e) = fs::remove_file(&pid_path) {
+                warn!("Failed to remove pid file {}: {e}", pid_path.display());
+            }
+            println!("Daemon stopped");
+        }
+        Some(pid) => {
+            warn!("Found stale ankura pid file pointing to pid {pid}, removing it");
+            if let Err(e) = fs::remove_file(&pid_path) {
+                warn!(
+                    "Failed to remove stale pid file {}: {e}",
+                    pid_path.display()
+                );
+            }
+            println!("Daemon is not running");
+        }
+        None => {
+            println!("Daemon is not running");
+        }
+    }
+
     Ok(())
 }
 
@@ -143,8 +443,6 @@ pub async fn check_config(config_path: PathBuf) -> Result<()> {
 }
 
 pub fn show_logs(log_file: PathBuf, lines: usize, follow: bool) -> Result<()> {
-    use std::process::Command;
-
     if follow {
         Command::new("tail")
             .args(["-f", "-n", &lines.to_string()])

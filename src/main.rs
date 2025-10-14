@@ -13,7 +13,7 @@ async fn main() -> Result<()> {
     let config_path = expand_tilde(&cli.config);
 
     match cli.command {
-        Commands::Start { foreground } => cli::start_daemon(config_path, foreground).await,
+        Commands::Start { daemon_mode } => cli::start_daemon(config_path, daemon_mode).await,
         Commands::Stop => cli::stop_daemon().await,
         Commands::Compile {
             profile_name,
