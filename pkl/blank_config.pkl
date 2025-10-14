@@ -6,8 +6,5 @@ actions = new Actions {}
 mods = new Modifiers {}
 
 rules = List(
-
+  // Add your rules here
 )
-
-
-

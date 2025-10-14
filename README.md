@@ -1,6 +1,14 @@
-# Karabiner-Pkl
+# ankura
 
-A type-safe configuration tool for Karabiner-Elements using Apple's Pkl configuration language. Build sophisticated keyboard customizations with live-reload support and rich error reporting.
+A type-safe configuration tool for [Karabiner-Elements](https://karabiner-elements.pqrs.org/) using Apple's [Pkl](https://pkl-lang.org/) configuration language.
+
+ankura brings the power of [Pkl](https://pkl-lang.org/) to [Karabiner-Elements](https://karabiner-elements.pqrs.org/) configuration, allowing you to define keymaps in a declarative manner. [Pkl](https://pkl-lang.org/) provides autocomplete, type safety, validation, and excellent editor support that catches errors as you type. As a full programming language, Pkl lets you create your own abstractions and reusable patterns. You write simple, readable Pkl configurations that compile to Karabiner JSON. The live-reload daemon applies your changes instantly, making keyboard customization feel natural instead of painful.
+
+**Features:**
+- **Type-safe declarative DSL** - Write keyboard configurations in [Pkl](https://pkl-lang.org/) with full type checking, validation, and IDE support instead of error-prone JSON
+- **Built-in helpers for common patterns** - Pre-built abstractions for hyper keys, symbol layers, simultaneous key chords, dual-use keys, and sticky modifiers
+- **First-class macOS integrations** - Native support for popular window managers (yabai, AeroSpace) and system automation through shell commands
+- **Live-reload daemon** - File watching with instant configuration updates and desktop notifications when changes are applied
 
 ## Table of Contents
 
@@ -8,10 +16,12 @@ A type-safe configuration tool for Karabiner-Elements using Apple's Pkl configur
 - [Usage](#usage)
   - [Dual-Use Keys](#dual-use-keys)
   - [Simultaneous Layers](#simultaneous-layers)
-  - [Key Layers](#key-layers)
+  - [Layers](#layers)
   - [Simple Modifications](#simple-modifications)
+  - [Actions](#actions)
+  - [Built-ins](#built-ins)
 - [Yabai Integration](#yabai-integration)
-- [Advanced Usage](#advanced-usage)
+- [AeroSpace Integration](#aerospace-integration)
 
 ## Installation
 
@@ -23,21 +33,32 @@ brew install lrangell/ankura
 
 Create or edit `~/.config/ankura.pkl`:
 
-### Key Layers
+```pkl
+extends "/opt/homebrew/var/lib/ankura/config.pkl"
+
+name = "My Config"
+keys = new Keys{}
+actions = new Actions {}
+mods = new Modifiers {}
+
+rules = List(
+  // Your rules go here
+)
+```
+
+### Layers
 
 Create modal layers for complex workflows.
 
-````pkl
+```pkl
 Layer {
-    trigger = keys.spacebar
-    mappings = Map(
-        keys.h, keys.left_arrow,
-        keys.j, keys.down_arrow,
-        keys.k, keys.up_arrow,
-        keys.l, keys.right_arrow
-    )
+  modifier = mods.ctrl
+  h = keys.left
+  j = keys.down
+  k = keys.up
+  l = keys.right
 }
-
+```
 
 ### Dual-Use Keys
 
@@ -45,11 +66,11 @@ Transform keys to behave differently when tapped vs held.
 
 ```pkl
 DualUse {
-    key = keys.caps_lock
-    tap = keys.escape
-    hold = keys.left_control
+  key = keys.capsLock
+  tap = keys.esc
+  hold = keys.ctrl
 }
-````
+```
 
 ### Simultaneous Layers
 
@@ -57,11 +78,11 @@ Activate arrow keys while holding a trigger.
 
 ```pkl
 SimLayer {
-    trigger = keys.f
-    h = keys.left_arrow
-    j = keys.down_arrow
-    k = keys.up_arrow
-    l = keys.right_arrow
+  trigger = "f"
+  h = keys.left
+  j = keys.down
+  k = keys.up
+  l = keys.right
 }
 ```
 
@@ -70,10 +91,85 @@ SimLayer {
 Basic key remapping.
 
 ```pkl
-SimpleModification {
-    from = keys.right_command
-    to = keys.right_option
+simpleModifications = List(
+  new SimpleModification {
+    from = "right_command"
+    to = "right_option"
+  }
+)
+```
+
+### SpaceMode
+
+Space key + other keys for quick shortcuts.
+
+```pkl
+SpaceMode {
+  h = keys.left
+  j = keys.down
+  k = keys.up
+  l = keys.right
+  comma = keys.option.and(keys.comma)
 }
+```
+
+### Actions
+
+Trigger app launches, text insertion, and shell commands.
+
+```pkl
+SpaceMode {
+  w = actions.launchApp("Google Chrome")
+  s = actions.focusOrLaunchApp("Slack")
+  u = actions.typeText("Hello, World!")
+  n = actions.showNotification("Title", "Message")
+}
+```
+
+### Built-ins
+
+Built-in patterns for common keyboard customizations.
+
+```pkl
+List(
+  builtins.hyperKey(),              // caps_lock → ⌃⌥⇧⌘
+  builtins.hyperKeyDualUse(),       // caps_lock → ⌃⌥⇧⌘ when held, escape when tapped
+
+  // Symbol layer for programming
+  builtins.symbolLayer(keys.rightShift.key_code),  // hold right_shift for symbols
+
+  // Simultaneous key combos (chords)
+  builtins.simultaneous("j", "k", keys.escape),     // j+k → escape
+
+  // Key swaps
+  builtins.swapKeys(keys.tab.key_code, keys.escape.key_code),     // swap any two keys
+  builtins.swapSemicolon(),                  // ; ↔ : swap
+  builtins.swapGraveEscape(),                // ` ↔ escape
+  builtins.swapBackslashPipe(),              // \ ↔ | swap
+  builtins.swapCapsCtrl(),                   // capsLock ↔ leftControl
+  builtins.swapCmdOpt(),                     // leftCommand ↔ leftOption
+
+  // Sticky modifiers (one-shot)
+  builtins.stickyModifier(keys.f.key_code, mods.leftShift),  // tap f → next key shifted
+  builtins.stickyShift(),                    // tap shift → next key shifted
+  builtins.stickyCmd(),                      // tap cmd → next key with cmd
+  builtins.stickyOpt(),                      // tap opt → next key with opt
+  builtins.stickyCtrl()                      // tap ctrl → next key with ctrl
+)
+```
+
+**Custom options:**
+
+```pkl
+List(
+  builtins.hyperKey(keys.tab.key_code),                    // custom trigger key
+  builtins.simultaneous("f", "d", keys.deleteForward, 30), // custom threshold
+  builtins.symbolLayer(keys.capsLock.key_code, Mapping {
+    ["h"] = keys.openBracket     // h → [
+    ["j"] = keys.closeBracket    // j → ]
+  }),
+  builtins.stickyShift(keys.f.key_code)                   // custom trigger for sticky shift
+)
 ```
 
 ## Yabai Integration
@@ -84,76 +180,67 @@ SimpleModification {
 Control yabai window manager directly from your keyboard:
 
 ```pkl
-
-name = "Yabai Profile"
-
-yabaiConfig = new yabai.Yabai {
-    window {
-        modifier = keys.left_command
-
-        focus {
-            west = keys.h
-            south = keys.j
-            north = keys.k
-            east = keys.l
-            recent = keys.tab
-        }
-
-        swap {
-            modifier = List(keys.left_command, keys.left_shift)
-            west = keys.h
-            south = keys.j
-            north = keys.k
-            east = keys.l
-        }
-
-        resize {
-            modifier = List(keys.left_control, keys.left_option)
-            left = keys.h
-            down = keys.j
-            up = keys.k
-            right = keys.l
-            increase = keys.plus
-            decrease = keys.minus
-            amount = 50
-        }
+yabai {
+  modifier = "d"
+  window {
+    focus {
+      west = "h"
+      south = "j"
+      north = "k"
+      east = "l"
     }
 
-    space {
-        focus {
-            modifier = keys.left_command
-            mappings = new Mapping {
-                ["1"] = keys.key_1
-                ["2"] = keys.key_2
-                ["3"] = keys.key_3
-                ["4"] = keys.key_4
-                ["5"] = keys.key_5
-            }
-            prev = keys.open_bracket
-            next = keys.close_bracket
-        }
+    swap {
+      modifier = List(mods.cmd, mods.shift)
+      west = "h"
+      south = "j"
+      north = "k"
+      east = "l"
     }
 
-    display {
-        focus {
-            modifier = List(keys.left_command, keys.left_option)
-            mappings = new Mapping {
-                ["1"] = keys.key_1
-                ["2"] = keys.key_2
-                ["3"] = keys.key_3
-            }
-            prev = keys.comma
-            next = keys.period
-        }
+    resize {
+      modifier = List(mods.ctrl, mods.opt)
+      left = "h"
+      down = "j"
+      up = "k"
+      right = "l"
     }
+  }
 
-    toggles {
-        modifier = List(keys.left_command, keys.left_option, keys.left_shift)
-        float = keys.f
-        fullscreen = keys.m
-        sticky = keys.s
-        zoom = keys.z
+  space {
+    focus {
+      mappings {
+        ["1"] = "u"
+        ["2"] = "i"
+        ["3"] = "o"
+        ["4"] = "p"
+        ["5"] = keys.openBracket
+      }
+      prev = "n"
+      next = "m"
     }
+  }
+
+  display {
+    focus {
+      modifier = List(mods.cmd, mods.opt)
+      mappings {
+        ["1"] = "1"
+        ["2"] = "2"
+        ["3"] = "3"
+      }
+      prev = keys.comma
+      next = keys.period
+    }
+  }
+
+  toggles {
+    modifier = List(mods.cmd, mods.opt, mods.shift)
+    float = "f"
+    fullscreen = "m"
+    sticky = "s"
+    zoom = "z"
+  }
 }
 ```
 
@@ -167,177 +254,76 @@ yabaiConfig = new yabai.Yabai {
 Control AeroSpace tiling window manager with keyboard shortcuts:
 
 ```pkl
-
-aerospace  {
-    window {
-        modifier = "left_alt"
-        focus {
-            left = "h"
-            down = "j"
-            up = "k"
-            right = "l"
-            dfsNext = "n"
-            dfsPrev = "p"
-        }
-
-        move {
-            // When mofifier is ommitted, it defaults to parent modifier
-            left = "h"
-            down = "j"
-            up = "k"
-            right = "l"
-        }
-
-        resize {
-            modifier = List("left_alt", "left_control")
-            width = "w"
-            height = "h"
-            smart = "s"
-            amount = 100
-        }
-
-        layout {
-            tiling = "t"
-            floating = "f"
-            fullscreen = "m"
-        }
+aerospace {
+  modifier = "f"
+  window {
+    focus {
+      left = "h"
+      down = "j"
+      up = "k"
+      right = "l"
+      dfsNext = "n"
+      dfsPrev = "p"
     }
 
-    workspace {
-        focus {
-            modifier = "left_alt"
-            mappings = {
-                ["1"] = "1"
-                ["2"] = "2"
-                ["3"] = "3"
-                ["web"] = "w"
-                ["code"] = "c"
-            }
-            next = "tab"
-            prev = "grave_accent_and_tilde"
-        }
-
-        move {
-            modifier = List("left_alt", "left_shift")
-            mappings = {
-                ["1"] = "1"
-                ["2"] = "2"
-                ["3"] = "3"
-            }
-        }
+    move {
+      left = "h"
+      down = "j"
+      up = "k"
+      right = "l"
     }
 
-    // AeroSpace-specific: Mode system for contextual bindings
-    modes {
-        resize {
-            trigger = "r"
-            modifier = "left_alt"
-            bindings {
-                bindings = {
-                    ["h"] = "resize width -50"
-                    ["l"] = "resize width +50"
-                    ["j"] = "resize height +50"
-                    ["k"] = "resize height -50"
-                }
-            }
-        }
+    resize {
+      modifier = List(mods.opt, mods.ctrl)
+      width = "w"
+      height = "h"
+      smart = "s"
+      amount = 100
     }
+
+    layout {
+      tiling = "t"
+      floating = "f"
+      fullscreen = "m"
+    }
+  }
+
+  workspace {
+    focus {
+      mappings {
+        ["1"] = "u"
+        ["2"] = "i"
+        ["3"] = "o"
+      }
+      next = keys.tab
+      prev = "h"
+    }
+
+    move {
+      modifier = List(mods.opt, mods.shift)
+      mappings {
+        ["1"] = "1"
+        ["2"] = "2"
+        ["3"] = "3"
+      }
+      prev = "n"
+      next = "m"
+    }
+  }
+
+  modes {
+    resize {
+      trigger = "r"
+      modifier = mods.opt
+      bindings {
+        ["h"] = "resize width -50"
+        ["l"] = "resize width +50"
+        ["j"] = "resize height +50"
+        ["k"] = "resize height -50"
+      }
+    }
+  }
 }
 ```
 
 </details>
-
-## Advanced Usage
-
-<details>
-<summary>Click to expand advanced customization examples</summary>
-
-### Complex Conditional Rules
-
-```pkl
-
-rules = List(
-    k.rule("Context-Aware Navigation", List(
-        k.manipulator(
-            k.map(k.key("h", Set(keys.left_command))),
-            k.to(keys.left_arrow)
-        ) { conditions = List(k.frontmostApp("com.apple.finder")) },
-
-        k.manipulator(
-            k.map(k.key("h", Set(keys.left_command))),
-            k.to(keys.backspace)
-        ) { conditions = List(k.frontmostApp("com.microsoft.VSCode")) }
-    ))
-)
-```
-
-### Custom Settings and Device Targeting
-
-```pkl
-settings = new k.ComplexModificationParameters {
-    basic = new k.BasicParameters {
-        simultaneousThresholdMilliseconds = 50
-        toDelayedActionDelayMilliseconds = 500
-        toIfAloneTimeoutMilliseconds = 1000
-    }
-}
-
-devices = List(
-    new k.Device {
-        identifiers = new k.DeviceIdentifiers {
-            vendorId = 1452
-            productId = 641
-        }
-        simpleModifications = List(
-            new k.SimpleModification {
-                from = keys.caps_lock
-                to = keys.left_control
-            }
-        )
-    }
-)
-```
-
-### Multi-Modal Layer System
-
-```pkl
-
-rules = List(
-    // Navigation mode
-    new k.Layer {
-        trigger = keys.semicolon
-        mappings = Map(
-            keys.h, keys.left_arrow,
-            keys.j, keys.down_arrow,
-            keys.k, keys.up_arrow,
-            keys.l, keys.right_arrow,
-            keys.u, k.key(keys.left_arrow, Set(keys.left_command)),
-            keys.i, k.key(keys.right_arrow, Set(keys.left_command))
-        )
-    },
-
-    // Window management mode
-    new k.Layer {
-        trigger = keys.w
-        mappings = Map(
-            keys.f, k.key(keys.return, Set(keys.left_command, keys.left_control)),
-            keys.h, k.key(keys.left_arrow, Set(keys.left_command, keys.left_option)),
-            keys.l, k.key(keys.right_arrow, Set(keys.left_command, keys.left_option))
-        )
-    },
-
-    // Application launcher
-    new k.Layer {
-        trigger = keys.spacebar
-        condition = k.held(Set(keys.left_command))
-        mappings = Map(
-            keys.t, k.launchApp("Terminal"),
-            keys.b, k.launchApp("Safari"),
-            keys.c, k.launchApp("Visual Studio Code")
-        )
-    }
-)
-```
-
-</details>
-
