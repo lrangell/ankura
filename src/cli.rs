@@ -12,7 +12,7 @@ use std::process::{Command, Stdio};
 use std::time::Duration;
 use tokio::signal::unix::{signal, SignalKind};
 use tokio::time::sleep;
-use tracing::{info, warn};
+use tracing::{debug, info, warn};
 
 use libc::{self, c_int, pid_t, EPERM, ESRCH, SIGTERM};
 
@@ -28,8 +28,13 @@ pub struct Cli {
     #[arg(short, long, global = true, default_value = "~/.config/ankura.pkl")]
     pub config: String,
 
-    #[arg(short, long, global = true)]
-    pub debug: bool,
+    #[arg(
+        short = 'd',
+        long = "debug-log",
+        global = true,
+        help = "Enable verbose debug logging"
+    )]
+    pub debug_log: bool,
 }
 
 #[derive(Subcommand)]
@@ -87,15 +92,15 @@ pub enum Commands {
     },
 }
 
-pub async fn start_daemon(config_path: PathBuf, daemon_mode: bool) -> Result<()> {
+pub async fn start_daemon(config_path: PathBuf, daemon_mode: bool, debug_log: bool) -> Result<()> {
     if daemon_mode {
         run_daemon(config_path).await
     } else {
-        spawn_daemon(config_path).await
+        spawn_daemon(config_path, debug_log).await
     }
 }
 
-async fn spawn_daemon(config_path: PathBuf) -> Result<()> {
+async fn spawn_daemon(config_path: PathBuf, debug_log: bool) -> Result<()> {
     let pid_path = daemon_pid_file()?;
 
     if let Some(existing_pid) = read_pid(&pid_path)? {
@@ -127,9 +132,13 @@ async fn spawn_daemon(config_path: PathBuf) -> Result<()> {
     })?;
 
     let mut command = Command::new(exe_path);
+    command.arg("--config").arg(&config_arg);
+
+    if debug_log {
+        command.arg("--debug-log");
+    }
+
     command
-        .arg("--config")
-        .arg(&config_arg)
         .arg("start")
         .arg("--daemon-mode")
         .stdin(Stdio::null())
@@ -147,7 +156,7 @@ async fn spawn_daemon(config_path: PathBuf) -> Result<()> {
     // Give the daemon a brief moment to write the PID file so that status commands can read it.
     for _ in 0..20 {
         if pid_path.exists() {
-            info!("Daemon pid file created at {}", pid_path.display());
+            debug!("Daemon pid file created at {}", pid_path.display());
             return Ok(());
         }
         sleep(Duration::from_millis(50)).await;

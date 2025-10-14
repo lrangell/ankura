@@ -1,16 +1,29 @@
-use std::fs;
+use std::fs::{self, OpenOptions};
 use std::path::PathBuf;
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
-pub fn init_logging() -> std::result::Result<PathBuf, Box<dyn std::error::Error + Send + Sync>> {
-    let log_dir = PathBuf::from("/opt/homebrew/var/log/ankura");
+pub const LOG_DIR: &str = "/opt/homebrew/var/log/ankura";
+pub const LOG_FILE_NAME: &str = "ankura.log";
+
+pub fn log_dir() -> PathBuf {
+    PathBuf::from(LOG_DIR)
+}
+
+pub fn log_file_path() -> PathBuf {
+    log_dir().join(LOG_FILE_NAME)
+}
+
+pub fn init_logging(
+    debug_log: bool,
+) -> std::result::Result<PathBuf, Box<dyn std::error::Error + Send + Sync>> {
+    let log_dir = log_dir();
 
     fs::create_dir_all(&log_dir)?;
 
-    let log_file = log_dir.join("ankura.log");
+    let log_file = log_file_path();
     let file_appender = tracing_subscriber::fmt::layer()
         .with_writer(std::sync::Mutex::new(
-            fs::OpenOptions::new()
+            OpenOptions::new()
                 .create(true)
                 .append(true)
                 .open(&log_file)?,
@@ -26,10 +39,14 @@ pub fn init_logging() -> std::result::Result<PathBuf, Box<dyn std::error::Error 
         .with_thread_names(false);
 
     tracing_subscriber::registry()
-        .with(
-            EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| EnvFilter::new("ankura=info,warn")),
-        )
+        .with(EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+            let default_level = if debug_log { "debug" } else { "info" };
+            let directives = format!(
+                "ankura={level},notify=warn,notify_debouncer_mini=warn",
+                level = default_level
+            );
+            EnvFilter::new(directives)
+        }))
         .with(console_layer)
         .with(file_appender)
         .init();

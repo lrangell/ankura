@@ -5,7 +5,7 @@ use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use tracing::info;
+use tracing::debug;
 use which::which;
 
 const ANKURA_LIB_DIR: &str = "/opt/homebrew/var/lib/ankura";
@@ -33,7 +33,7 @@ impl Compiler {
     }
 
     pub async fn compile(&self, config_path: &Path, profile_name: Option<&str>) -> Result<Value> {
-        info!("Compiling {}", config_path.display());
+        debug!("Compiling {}", config_path.display());
 
         if !config_path.exists() {
             return Err(KarabinerPklError::ConfigReadError {
@@ -185,7 +185,7 @@ impl Compiler {
     pub fn materialize_pkl_lib() -> Result<PathBuf> {
         let data_dir = PathBuf::from(ANKURA_LIB_DIR);
 
-        info!(
+        debug!(
             "Attempting to materialize pkl files to {}",
             data_dir.display()
         );
@@ -204,7 +204,7 @@ impl Compiler {
         };
 
         if should_extract {
-            info!("Extracting embedded pkl files to {}", data_dir.display());
+            debug!("Extracting embedded pkl files to {}", data_dir.display());
 
             for file in PklLib::iter() {
                 let file_path = data_dir.join(file.as_ref());

@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::RwLock;
-use tracing::{error, info};
+use tracing::{debug, error, info};
 
 pub struct Daemon {
     config_path: PathBuf,
@@ -45,7 +45,7 @@ impl Daemon {
         }
 
         info!("Starting ankura daemon");
-        info!("Watching: {}", self.config_path.display());
+        debug!("Watching: {}", self.config_path.display());
 
         self.compile_and_notify(None).await;
 
@@ -72,7 +72,12 @@ impl Daemon {
         let watcher = self.watcher.clone();
 
         tokio::spawn(async move {
-            loop {
+            enum WatchLoopExit {
+                ChannelClosed(std::sync::mpsc::RecvError),
+                Stopped,
+            }
+
+            let exit_reason = loop {
                 match rx.recv() {
                     Ok(Ok(events)) => {
                         let should_compile = events.iter().any(|event| {
@@ -89,7 +94,7 @@ impl Daemon {
                         });
 
                         if should_compile {
-                            info!("Configuration file changed, recompiling...");
+                            debug!("Configuration file changed, recompiling...");
                             Self::compile_with_notification(
                                 &compiler,
                                 &notification_manager,
@@ -102,14 +107,24 @@ impl Daemon {
                     Ok(Err(e)) => {
                         error!("Watch error: {:?}", e);
                     }
-                    Err(e) => {
-                        error!("Channel receive error: {:?}", e);
-                        break;
-                    }
+                    Err(e) => break WatchLoopExit::ChannelClosed(e),
                 }
 
                 if !*is_running.read().await {
-                    break;
+                    break WatchLoopExit::Stopped;
+                }
+            };
+
+            match exit_reason {
+                WatchLoopExit::ChannelClosed(e) => {
+                    if *is_running.read().await {
+                        error!("File watcher channel closed unexpectedly: {:?}", e);
+                    } else {
+                        debug!("File watcher channel closed");
+                    }
+                }
+                WatchLoopExit::Stopped => {
+                    debug!("File watcher loop stopping");
                 }
             }
 
