@@ -21,14 +21,7 @@ pub enum KarabinerPklError {
 
     #[error("Pkl compilation failed")]
     #[diagnostic(code(ankura::pkl_compile_error))]
-    PklCompileError {
-        #[help]
-        help: String,
-        #[source_code]
-        source_code: String,
-        #[label("error occurred here")]
-        span: Option<miette::SourceSpan>,
-    },
+    PklCompileError { message: String, line: usize },
 
     #[error("Invalid JSON output from Pkl")]
     #[diagnostic(

@@ -199,7 +199,12 @@ impl Daemon {
             }
             Err(e) => {
                 error!("Compilation failed: {:?}", e);
-                let error_msg = format!("Compilation failed: {e}");
+                let error_msg = match &e {
+                    KarabinerPklError::PklCompileError { message, line } => {
+                        format!("{message}\nAt line {line}")
+                    }
+                    _ => format!("Compilation failed: {e}"),
+                };
                 notification_manager.send_error(&error_msg);
             }
         }

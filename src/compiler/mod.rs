@@ -1,10 +1,12 @@
 use crate::error::{KarabinerPklError, Result};
+use regex::Regex;
 use rust_embed::RustEmbed;
 use serde_json::Value;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::sync::OnceLock;
 use tracing::debug;
 use which::which;
 
@@ -63,40 +65,22 @@ impl Compiler {
 
         pkl_command.arg("--module-path");
         pkl_command.arg(module_paths.join(":"));
-        let output =
-            pkl_command
-                .arg(config_path)
-                .output()
-                .map_err(|e| KarabinerPklError::DaemonError {
-                    message: format!("Failed to execute pkl: {e}"),
-                })?;
+        pkl_command.arg(config_path);
+
+        let output = pkl_command
+            .output()
+            .map_err(|e| KarabinerPklError::DaemonError {
+                message: format!("Failed to execute pkl: {e}"),
+            })?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            let source = std::fs::read_to_string(config_path).map_err(|e| {
-                KarabinerPklError::ConfigReadError {
-                    path: config_path.to_path_buf(),
-                    source: e,
-                }
-            })?;
+            eprintln!("{stderr}");
 
-            let span = Self::parse_pkl_error_location(&stderr, &source);
-
-            let error_msg = if let Some(start) = stderr.find("–– Pkl Error ––") {
-                let msg_start = start + "–– Pkl Error ––".len();
-                if let Some(end) = stderr[msg_start..].find("\n\n") {
-                    stderr[msg_start..msg_start + end].trim().to_string()
-                } else {
-                    stderr[msg_start..].trim().to_string()
-                }
-            } else {
-                stderr.to_string()
-            };
-
+            let (error_msg, line_number) = Self::parse_pkl_error(&stderr, config_path);
             return Err(KarabinerPklError::PklCompileError {
-                help: error_msg,
-                source_code: source,
-                span,
+                message: error_msg,
+                line: line_number,
             });
         }
 
@@ -151,35 +135,30 @@ impl Compiler {
         Ok(())
     }
 
-    fn parse_pkl_error_location(error_str: &str, source_code: &str) -> Option<miette::SourceSpan> {
-        if let Some(line_match) = error_str.rfind("line ") {
-            let rest = &error_str[line_match + 5..];
-            if let Some(paren) = rest.find(')') {
-                if let Ok(line_num) = rest[..paren].trim().parse::<usize>() {
-                    let mut col = 1;
-                    let lines: Vec<&str> = error_str.lines().collect();
+    fn parse_pkl_error(stderr: &str, config_path: &Path) -> (String, usize) {
+        static LINE_REGEX: OnceLock<Regex> = OnceLock::new();
+        let line_regex = LINE_REGEX.get_or_init(|| Regex::new(r"line (\d+)\)").unwrap());
 
-                    for line in lines.iter() {
-                        if line.contains('^') {
-                            col = line.find('^').unwrap_or(0) + 1;
-                            break;
-                        }
-                    }
+        let error_message = stderr
+            .lines()
+            .nth(1)
+            .map(|line| line.trim().to_string())
+            .unwrap_or_else(|| "Compilation failed".to_string());
 
-                    let mut offset = 0;
-                    for (idx, line) in source_code.lines().enumerate() {
-                        if idx + 1 == line_num {
-                            offset += col.saturating_sub(1);
-                            break;
-                        }
-                        offset += line.len() + 1;
-                    }
+        let config_file_name = config_path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("ankura.pkl");
 
-                    return Some(miette::SourceSpan::new(offset.into(), 1));
-                }
-            }
-        }
-        None
+        let line_number = stderr
+            .lines()
+            .find(|line| line.contains(config_file_name))
+            .and_then(|line| line_regex.captures(line))
+            .and_then(|caps| caps.get(1))
+            .and_then(|m| m.as_str().parse::<usize>().ok())
+            .unwrap_or(0);
+
+        (error_message, line_number)
     }
 
     pub fn materialize_pkl_lib() -> Result<PathBuf> {

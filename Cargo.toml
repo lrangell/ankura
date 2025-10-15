@@ -1,6 +1,6 @@
 [package]
 name = "ankura"
-version = "0.3.5"
+version = "0.3.6"
 edition = "2021"
 authors = ["Lucas Rangel"]
 description = "Karabiner configuration using Apple Pkl language"
@@ -34,6 +34,7 @@ toml = "0.8"
 reqwest = { version = "0.12", features = ["json"] }
 rust-embed = { version = "8.5", features = ["include-exclude"] }
 libc = "0.2"
+regex = "1.11"
 
 [dev-dependencies]
 pretty_assertions = "1.4"

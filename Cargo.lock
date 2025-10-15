@@ -28,7 +28,7 @@ dependencies = [
 
 [[package]]
 name = "ankura"
-version = "0.3.5"
+version = "0.3.6"
 dependencies = [
  "clap",
  "dirs 5.0.1",
@@ -38,6 +38,7 @@ dependencies = [
  "notify",
  "notify-debouncer-mini",
  "pretty_assertions",
+ "regex",
  "reqwest",
  "rust-embed",
  "serde",
