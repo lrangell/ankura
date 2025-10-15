@@ -5,8 +5,9 @@ A type-safe configuration tool for [Karabiner-Elements](https://karabiner-elemen
 ankura brings the power of [Pkl](https://pkl-lang.org/) to [Karabiner-Elements](https://karabiner-elements.pqrs.org/) configuration, allowing you to define keymaps in a declarative manner. [Pkl](https://pkl-lang.org/) provides autocomplete, type safety, validation, and excellent editor support that catches errors as you type. As a full programming language, Pkl lets you create your own abstractions and reusable patterns. You write simple, readable Pkl configurations that compile to Karabiner JSON. The live-reload daemon applies your changes instantly, making keyboard customization feel natural instead of painful.
 
 **Features:**
+
 - **Type-safe declarative DSL** - Write keyboard configurations in [Pkl](https://pkl-lang.org/) with full type checking, validation, and IDE support instead of error-prone JSON
-- **Built-in helpers for common patterns** - Pre-built abstractions for hyper keys, symbol layers, simultaneous key chords, dual-use keys, and sticky modifiers
+- **Built-in helpers for common patterns** - Pre-built abstractions for hyper keys, symbol layers, key swaps, and dual-use keys
 - **First-class macOS integrations** - Native support for popular window managers (yabai, AeroSpace) and system automation through shell commands
 - **Live-reload daemon** - File watching with instant configuration updates and desktop notifications when changes are applied
 
@@ -51,7 +52,7 @@ rules = List(
 Create modal layers for complex workflows.
 
 ```pkl
-Layer {
+new Layer {
   modifier = mods.ctrl
   h = keys.left
   j = keys.down
@@ -65,7 +66,7 @@ Layer {
 Transform keys to behave differently when tapped vs held.
 
 ```pkl
-DualUse {
+new DualUse {
   key = keys.capsLock
   tap = keys.esc
   hold = keys.ctrl
@@ -77,7 +78,7 @@ DualUse {
 Activate arrow keys while holding a trigger.
 
 ```pkl
-SimLayer {
+new SimLayer {
   trigger = "f"
   h = keys.left
   j = keys.down
@@ -91,12 +92,10 @@ SimLayer {
 Basic key remapping.
 
 ```pkl
-simpleModifications = List(
-  new SimpleModification {
-    from = "right_command"
-    to = "right_option"
-  }
-)
+new BasicMap {
+  key = keys.capsLock
+  action = keys.esc
+}
 ```
 
 ### SpaceMode
@@ -104,72 +103,118 @@ simpleModifications = List(
 Space key + other keys for quick shortcuts.
 
 ```pkl
-SpaceMode {
+new SpaceMode {
   h = keys.left
   j = keys.down
   k = keys.up
   l = keys.right
+  i = keys.del
   comma = keys.option.and(keys.comma)
+  period = keys.option.and(keys.period)
+  semicolon = keys.returnOrEnter
 }
 ```
 
 ### Actions
 
-Trigger app launches, text insertion, and shell commands.
+Execute shell commands, launch applications, and control system functions.
 
 ```pkl
-SpaceMode {
-  w = actions.launchApp("Google Chrome")
-  s = actions.focusOrLaunchApp("Slack")
-  u = actions.typeText("Hello, World!")
-  n = actions.showNotification("Title", "Message")
+// Launch or focus application
+new BasicMap {
+  key = "s"
+  mod = mods.cmd
+  action = actions.focusOrLaunchApp("Slack")
+}
+
+// Run shell commands and open URLs
+new SimLayer {
+  trigger = "d"
+  y = actions.runShell("/opt/homebrew/bin/yabai -m space --focus recent")
+  u = actions.openUrl("https://example.com")
+}
+
+// Type text when held, normal key when tapped
+new DualUse {
+  key = keys.comma
+  hold = actions.typeText("user@example.com")
+  tap = keys.comma
 }
 ```
 
-### Built-ins
+<details>
+<summary>Click to expand all available actions</summary>
 
-Built-in patterns for common keyboard customizations.
+#### Application Management
 
 ```pkl
-List(
-  builtins.hyperKey(),              // caps_lock → ⌃⌥⇧⌘
-  builtins.hyperKeyDualUse(),       // caps_lock → ⌃⌥⇧⌘ when held, escape when tapped
-
-  // Symbol layer for programming
-  builtins.symbolLayer(keys.rightShift.key_code),  // hold right_shift for symbols
-
-  // Simultaneous key combos (chords)
-  builtins.simultaneous("j", "k", keys.escape),     // j+k → escape
-
-  // Key swaps
-  builtins.swapKeys(keys.tab.key_code, keys.escape.key_code),     // swap any two keys
-  builtins.swapSemicolon(),                  // ; ↔ : swap
-  builtins.swapGraveEscape(),                // ` ↔ escape
-  builtins.swapBackslashPipe(),              // \ ↔ | swap
-  builtins.swapCapsCtrl(),                   // capsLock ↔ leftControl
-  builtins.swapCmdOpt(),                     // leftCommand ↔ leftOption
-
-  // Sticky modifiers (one-shot)
-  builtins.stickyModifier(keys.f.key_code, mods.leftShift),  // tap f → next key shifted
-  builtins.stickyShift(),                    // tap shift → next key shifted
-  builtins.stickyCmd(),                      // tap cmd → next key with cmd
-  builtins.stickyOpt(),                      // tap opt → next key with opt
-  builtins.stickyCtrl()                      // tap ctrl → next key with ctrl
-)
+actions.launchApp("Google Chrome")           // Launch application
+actions.focusOrLaunchApp("Slack")            // Focus or launch if not running
+actions.closeWindow()                        // Close current window (⌘W)
+actions.closeApp()                           // Quit application (⌘Q)
 ```
 
-**Custom options:**
+#### Shell Commands
 
 ```pkl
-List(
-  builtins.hyperKey(keys.tab.key_code),                    // custom trigger key
-  builtins.simultaneous("f", "d", keys.deleteForward, 30), // custom threshold
-  builtins.symbolLayer(keys.capsLock.key_code, Mapping {
-    ["h"] = keys.openBracket     // h → [
-    ["j"] = keys.closeBracket    // j → ]
-  }),
-  builtins.stickyShift(keys.f.key_code)                   // custom trigger for sticky shift
-)
+actions.runShell("/opt/homebrew/bin/yabai -m space --focus recent")
+actions.runBin("/usr/local/bin/custom-script", List("arg1", "arg2"))
+actions.openUrl("https://example.com")
+```
+
+#### Text and Notifications
+
+```pkl
+actions.typeText("user@example.com")
+actions.showNotification("Build Complete", "All tests passed!")
+```
+
+#### System Controls
+
+```pkl
+actions.lockScreen()                         // Lock screen
+actions.sleep()                              // Put system to sleep
+actions.volumeUp()                           // Increase volume
+actions.volumeDown()                         // Decrease volume
+actions.mute()                               // Toggle mute
+actions.brightnessUp()                       // Increase brightness
+actions.brightnessDown()                     // Decrease brightness
+```
+
+#### Screenshots
+
+```pkl
+actions.screenshot()                         // Screenshot to clipboard
+actions.screenshotSelection()                // Screenshot selection
+actions.screenshotWindow()                   // Screenshot window
+```
+
+#### Utilities
+
+```pkl
+actions.showLaunchpad()                      // Open Launchpad
+actions.openActivityMonitor()                // Open Activity Monitor
+```
+
+</details>
+
+### Built-ins
+
+Pre-built patterns for common keyboard customizations.
+
+```pkl
+// Hyper key - map caps_lock to all four modifiers (⌃⌥⇧⌘)
+builtins.hyperKey(keys.capsLock)
+
+// Dual-use hyper key - ⌃⌥⇧⌘ when held, escape when tapped
+builtins.hyperKeyDualUse(keys.capsLock)
+
+// Symbol layer - hold right_shift for quick access to programming symbols
+builtins.symbolLayer(keys.rightShift)
+
+// Key swaps
+builtins.swapKeys(keys.tab, keys.escape)  // swap tab and escape
+builtins.swapSemicolon()                  // swap ; and :
 ```
 
 ## Yabai Integration
@@ -311,18 +356,7 @@ aerospace {
     }
   }
 
-  modes {
-    resize {
-      trigger = "r"
-      modifier = mods.opt
-      bindings {
-        ["h"] = "resize width -50"
-        ["l"] = "resize width +50"
-        ["j"] = "resize height +50"
-        ["k"] = "resize height -50"
-      }
-    }
-  }
+
 }
 ```
 
