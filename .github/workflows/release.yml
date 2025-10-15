@@ -2,7 +2,8 @@ name: Release
 
 on:
   push:
-    branches: [production]
+    tags:
+      - 'v*.*.*'
   workflow_dispatch:
     inputs:
       version:
@@ -53,58 +54,11 @@ jobs:
           SCCACHE_GHA_ENABLED: "true"
           RUSTC_WRAPPER: "sccache"
 
-  test:
-    name: Run Tests
-    needs: check
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [macos-latest]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Install Pkl
-        run: |
-          PKL_VERSION="0.28.2"
-          # macOS-latest is Apple Silicon
-          curl -L -o pkl https://github.com/apple/pkl/releases/download/${PKL_VERSION}/pkl-macos-aarch64
-          chmod +x pkl
-          sudo mv pkl /usr/local/bin/
-          pkl --version
-
-      - name: Rust Cache
-        uses: Swatinem/rust-cache@v2
-        with:
-          prefix-key: "v0-rust-test-${{ matrix.os }}"
-
-      - name: Setup sccache
-        uses: mozilla-actions/sccache-action@v0.0.9
-
-      - name: Install cargo-nextest
-        uses: taiki-e/install-action@nextest
-
-      - name: Run tests
-        run: cargo nextest run --all-features --locked
-        env:
-          SCCACHE_GHA_ENABLED: "true"
-          RUSTC_WRAPPER: "sccache"
-
   release:
-    needs: test
+    needs: check
     name: Build and Release
     runs-on: macos-latest
-    strategy:
-      matrix:
-        include:
-          - target: x86_64-apple-darwin
-            name: intel
-          - target: aarch64-apple-darwin
-            name: apple-silicon
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -114,28 +68,12 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.target }}
-
-      - name: Install Pkl
-        run: |
-          PKL_VERSION="0.28.2"
-          curl -L -o pkl https://github.com/apple/pkl/releases/download/${PKL_VERSION}/pkl-macos-${{ matrix.target == 'x86_64-apple-darwin' && 'amd64' || 'aarch64' }}
-          chmod +x pkl
-          sudo mv pkl /usr/local/bin/
-          pkl --version
+          targets: aarch64-apple-darwin
 
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
         with:
-          prefix-key: "v0-rust-test-${{ matrix.os }}"
-
-      - name: Setup sccache
-        uses: mozilla-actions/sccache-action@v0.0.9
-
-      - name: Rust Cache
-        uses: Swatinem/rust-cache@v2
-        with:
-          prefix-key: "v0-rust-release-${{ matrix.target }}"
+          prefix-key: "v0-rust-release-aarch64"
 
       - name: Setup sccache
         uses: mozilla-actions/sccache-action@v0.0.9
@@ -153,37 +91,27 @@ jobs:
 
       - name: Build release binary
         run: |
-          cargo build --release --locked --target ${{ matrix.target }}
-          cp target/${{ matrix.target }}/release/karabiner-pkl karabiner-pkl-${{ matrix.name }}
+          cargo build --release --locked --target aarch64-apple-darwin
+          cp target/aarch64-apple-darwin/release/ankura ankura-apple-silicon
         env:
           SCCACHE_GHA_ENABLED: "true"
           RUSTC_WRAPPER: "sccache"
           CARGO_PROFILE_RELEASE_CODEGEN_UNITS: 16
 
-      - name: Install cargo-nextest
-        uses: taiki-e/install-action@nextest
-
-      - name: Run tests
-        run: cargo nextest run --release --locked --target ${{ matrix.target }}
-        env:
-          SCCACHE_GHA_ENABLED: "true"
-          RUSTC_WRAPPER: "sccache"
-
       - name: Create tarball
         run: |
-          tar czf karabiner-pkl-${{ steps.version.outputs.VERSION }}-${{ matrix.name }}.tar.gz karabiner-pkl-${{ matrix.name }}
-          shasum -a 256 karabiner-pkl-${{ steps.version.outputs.VERSION }}-${{ matrix.name }}.tar.gz > karabiner-pkl-${{ steps.version.outputs.VERSION }}-${{ matrix.name }}.tar.gz.sha256
+          tar czf ankura-${{ steps.version.outputs.TAG }}-aarch64-apple-darwin.tar.gz ankura-apple-silicon
+          shasum -a 256 ankura-${{ steps.version.outputs.TAG }}-aarch64-apple-darwin.tar.gz > ankura-${{ steps.version.outputs.TAG }}-aarch64-apple-darwin.sha256
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: karabiner-pkl-${{ matrix.name }}
+          name: ankura-apple-silicon
           path: |
-            karabiner-pkl-${{ steps.version.outputs.VERSION }}-${{ matrix.name }}.tar.gz
-            karabiner-pkl-${{ steps.version.outputs.VERSION }}-${{ matrix.name }}.tar.gz.sha256
+            ankura-${{ steps.version.outputs.TAG }}-aarch64-apple-darwin.tar.gz
+            ankura-${{ steps.version.outputs.TAG }}-aarch64-apple-darwin.sha256
 
-      - name: Create or update release
-        if: matrix.target == 'x86_64-apple-darwin'  # Only do this once
+      - name: Create release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.TAG }}
@@ -191,22 +119,15 @@ jobs:
           draft: false
           prerelease: false
           generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload release assets
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.version.outputs.TAG }}
           files: |
-            karabiner-pkl-${{ steps.version.outputs.VERSION }}-${{ matrix.name }}.tar.gz
-            karabiner-pkl-${{ steps.version.outputs.VERSION }}-${{ matrix.name }}.tar.gz.sha256
+            ankura-${{ steps.version.outputs.TAG }}-aarch64-apple-darwin.tar.gz
+            ankura-${{ steps.version.outputs.TAG }}-aarch64-apple-darwin.sha256
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   update-tap:
     name: Update Homebrew Tap
-    needs: [test, release]
+    needs: release
     runs-on: ubuntu-latest
     steps:
       - name: Get version
@@ -224,26 +145,16 @@ jobs:
           mkdir -p artifacts
           cd artifacts
 
-          # Download the tarballs and checksums
-          curl -L -o "ankura-${{ steps.version.outputs.TAG }}-x86_64-apple-darwin.tar.gz" \
-            "https://github.com/lrangell/ankura/releases/download/${{ steps.version.outputs.TAG }}/ankura-${{ steps.version.outputs.TAG }}-x86_64-apple-darwin.tar.gz"
-
           curl -L -o "ankura-${{ steps.version.outputs.TAG }}-aarch64-apple-darwin.tar.gz" \
             "https://github.com/lrangell/ankura/releases/download/${{ steps.version.outputs.TAG }}/ankura-${{ steps.version.outputs.TAG }}-aarch64-apple-darwin.tar.gz"
-
-          curl -L -o "ankura-${{ steps.version.outputs.TAG }}-x86_64-apple-darwin.sha256" \
-            "https://github.com/lrangell/ankura/releases/download/${{ steps.version.outputs.TAG }}/ankura-${{ steps.version.outputs.TAG }}-x86_64-apple-darwin.sha256"
 
           curl -L -o "ankura-${{ steps.version.outputs.TAG }}-aarch64-apple-darwin.sha256" \
             "https://github.com/lrangell/ankura/releases/download/${{ steps.version.outputs.TAG }}/ankura-${{ steps.version.outputs.TAG }}-aarch64-apple-darwin.sha256"
 
-      - name: Extract checksums
-        id: checksums
+      - name: Extract checksum
+        id: checksum
         run: |
-          X86_CHECKSUM=$(cat artifacts/ankura-${{ steps.version.outputs.TAG }}-x86_64-apple-darwin.sha256 | cut -d' ' -f1)
           ARM_CHECKSUM=$(cat artifacts/ankura-${{ steps.version.outputs.TAG }}-aarch64-apple-darwin.sha256 | cut -d' ' -f1)
-
-          echo "x86_checksum=${X86_CHECKSUM}" >> $GITHUB_OUTPUT
           echo "arm_checksum=${ARM_CHECKSUM}" >> $GITHUB_OUTPUT
 
       - name: Checkout tap repository
@@ -258,15 +169,11 @@ jobs:
         run: |
           cd tap
 
-          # Update version in formula
-          sed -i "s/version \".*\"/version \"${{ steps.version.outputs.VERSION }}\"/" Formula/ankura.rb
+          # Update version
+          sed -i 's/version ".*"/version "${{ steps.version.outputs.VERSION }}"/' Formula/ankura.rb
 
-          # Update Intel checksum (first occurrence)
-          sed -i "0,/sha256 \".*\"/{s/sha256 \".*\"/sha256 \"${{ steps.checksums.outputs.x86_checksum }}\"/}" Formula/ankura.rb
-
-          # Update ARM checksum (second occurrence)
-          awk -v arm="${{ steps.checksums.outputs.arm_checksum }}" '/sha256/ { count++; if (count == 2) { sub(/sha256 ".*"/, "sha256 \"" arm "\"") } } {print}' Formula/ankura.rb > Formula/ankura.rb.tmp
-          mv Formula/ankura.rb.tmp Formula/ankura.rb
+          # Update checksum
+          sed -i 's/sha256 ".*"/sha256 "${{ steps.checksum.outputs.arm_checksum }}"/' Formula/ankura.rb
 
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
