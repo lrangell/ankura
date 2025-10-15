@@ -82,10 +82,7 @@ impl Daemon {
                     Ok(Ok(events)) => {
                         let should_compile = events.iter().any(|event| {
                             let is_target = if let Some(file_name) = &config_file_name {
-                                event
-                                    .path
-                                    .file_name()
-                                    .is_some_and(|name| name == file_name)
+                                event.path.file_name().is_some_and(|name| name == file_name)
                             } else {
                                 event.path == config_path
                             };
