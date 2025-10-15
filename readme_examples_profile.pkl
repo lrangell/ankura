@@ -1,0 +1,203 @@
+extends "./pkl/config.pkl"
+
+name = "README Examples"
+keys = new Keys{}
+actions = new Actions {}
+mods = new Modifiers {}
+
+rules = List(
+  new Layer {
+    modifier = mods.ctrl
+    h = keys.left
+    j = keys.down
+    k = keys.up
+    l = keys.right
+  },
+
+  new DualUse {
+    key = keys.capsLock
+    tap = keys.esc
+    hold = keys.ctrl
+  },
+
+  new SimLayer {
+    trigger = "f"
+    h = keys.left
+    j = keys.down
+    k = keys.up
+    l = keys.right
+  },
+
+  new BasicMap {
+    key = keys.capsLock
+    action = keys.esc
+  },
+
+  new SpaceMode {
+    h = keys.left
+    j = keys.down
+    k = keys.up
+    l = keys.right
+    i = keys.del
+    comma = keys.option.and(keys.comma)
+    period = keys.option.and(keys.period)
+    semicolon = keys.returnOrEnter
+  },
+
+  new BasicMap {
+    key = "s"
+    mod = mods.cmd
+    action = actions.focusOrLaunchApp("Slack")
+  },
+
+  new SimLayer {
+    trigger = "d"
+    y = actions.runShell("/opt/homebrew/bin/yabai -m space --focus recent")
+    u = actions.openUrl("https://example.com")
+  },
+
+  new DualUse {
+    key = keys.comma
+    hold = actions.typeText("user@example.com")
+    tap = keys.comma
+  },
+
+  builtins.hyperKey(keys.capsLock),
+  builtins.hyperKeyDualUse(keys.capsLock),
+  builtins.symbolLayer(keys.rightShift),
+  builtins.swapKeys(keys.tab, keys.escape),
+  builtins.swapSemicolon()
+)
+
+yabai {
+  modifier = "d"
+  window {
+    focus {
+      west = "h"
+      south = "j"
+      north = "k"
+      east = "l"
+    }
+
+    swap {
+      modifier = List(mods.cmd, mods.shift)
+      west = "h"
+      south = "j"
+      north = "k"
+      east = "l"
+    }
+
+    resize {
+      modifier = List(mods.ctrl, mods.opt)
+      left = "h"
+      down = "j"
+      up = "k"
+      right = "l"
+    }
+  }
+
+  space {
+    focus {
+      mappings = new Mapping {
+        ["1"] = "u"
+        ["2"] = "i"
+        ["3"] = "o"
+        ["4"] = "p"
+        ["5"] = keys.openBracket
+      }
+      prev = "n"
+      next = "m"
+    }
+  }
+
+  display {
+    focus {
+      modifier = List(mods.cmd, mods.opt)
+      mappings = new Mapping {
+        ["1"] = "1"
+        ["2"] = "2"
+        ["3"] = "3"
+      }
+      prev = keys.comma
+      next = keys.period
+    }
+  }
+
+  toggles {
+    modifier = List(mods.cmd, mods.opt, mods.shift)
+    float = "f"
+    fullscreen = "m"
+    sticky = "s"
+    zoom = "z"
+  }
+}
+
+aerospace {
+  modifier = "f"
+  window {
+    focus {
+      left = "h"
+      down = "j"
+      up = "k"
+      right = "l"
+      dfsNext = "n"
+      dfsPrev = "p"
+    }
+
+    move {
+      left = "h"
+      down = "j"
+      up = "k"
+      right = "l"
+    }
+
+    resize {
+      modifier = List(mods.opt, mods.ctrl)
+      width = "w"
+      height = "h"
+      smart = "s"
+    }
+
+    layout {
+      tiling = "t"
+      floating = "f"
+      fullscreen = "m"
+    }
+  }
+
+  workspace {
+    focus {
+      mappings = new Mapping {
+        ["1"] = "u"
+        ["2"] = "i"
+        ["3"] = "o"
+      }
+      next = keys.tab
+      prev = "h"
+    }
+
+    move {
+      modifier = List(mods.opt, mods.shift)
+      mappings = new Mapping {
+        ["1"] = "1"
+        ["2"] = "2"
+        ["3"] = "3"
+      }
+      prev = "n"
+      next = "m"
+    }
+  }
+
+  modes {
+    resize {
+      trigger = "r"
+      modifier = mods.opt
+      bindings = new Mapping {
+        ["h"] = "resize width -50"
+        ["l"] = "resize width +50"
+        ["j"] = "resize height +50"
+        ["k"] = "resize height -50"
+      }
+    }
+  }
+}
