@@ -1,6 +1,6 @@
 [package]
 name = "ankura"
-version = "0.3.4"
+version = "0.3.5"
 edition = "2021"
 authors = ["Lucas Rangel"]
 description = "Karabiner configuration using Apple Pkl language"
@@ -26,7 +26,7 @@ notify-debouncer-mini = "0.4"
 clap = { version = "4.5", features = ["derive"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
-notify-rust = "4.11"
+mac-notification-sys = "0.6"
 dirs = "5.0"
 shellexpand = "3.1"
 which = "6.0"

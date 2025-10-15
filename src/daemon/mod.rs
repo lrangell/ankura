@@ -1,9 +1,9 @@
 use crate::cli::{merge_configurations, write_karabiner_config};
 use crate::compiler::Compiler;
 use crate::error::{KarabinerPklError, Result};
+use mac_notification_sys::Notification;
 use notify::{RecommendedWatcher, RecursiveMode};
 use notify_debouncer_mini::{new_debouncer, DebouncedEventKind, Debouncer};
-use notify_rust::{Notification, Timeout};
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -207,35 +207,34 @@ impl Daemon {
 }
 
 struct NotificationManager {
-    app_name: String,
+    icon_path: &'static str,
 }
 
 impl NotificationManager {
     pub fn new() -> Self {
-        Self {
-            app_name: "Karabiner-Pkl".to_string(),
-        }
+        #[cfg(debug_assertions)]
+        let icon_path = "./AppIcon.icns";
+
+        #[cfg(not(debug_assertions))]
+        let icon_path = "/opt/homebrew/share/ankura/AppIcon.icns";
+
+        Self { icon_path }
     }
 
     pub fn send_success(&self, message: &str) {
-        self.send_notification("✅ Success", message, false);
+        self.send_notification("Ankura - Success", message);
     }
 
     pub fn send_error(&self, message: &str) {
-        self.send_notification("❌ Error", message, true);
+        self.send_notification("Ankura - Error", message);
     }
 
-    fn send_notification(&self, title: &str, message: &str, is_error: bool) {
+    fn send_notification(&self, title: &str, message: &str) {
         let result = Notification::new()
-            .appname(&self.app_name)
-            .summary(title)
-            .body(message)
-            .timeout(if is_error {
-                Timeout::Never
-            } else {
-                Timeout::Milliseconds(3000)
-            })
-            .show();
+            .title(title)
+            .message(message)
+            .app_icon(self.icon_path)
+            .send();
 
         if let Err(e) = result {
             error!("Failed to send notification: {}", e);
