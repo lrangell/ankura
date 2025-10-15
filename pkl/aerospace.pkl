@@ -12,15 +12,16 @@ open class AerospaceMode {
   hidden modifier: (List<karabiner.Modifier> | karabiner.Modifier | String)?
   hidden mappings: Mapping<String, core.UserInput> = new Mapping {}
   hidden actionProvider: ((String) -> karabiner.ToEvent)
-  hidden ignore = List("manipulators", "defined", "rules", "modifier", "actions", "ignore", "mappings", "actionProvider", "ae", "focusShouldFollow")
+  hidden ignore = List("manipulators", "defined", "rules", "modifier", "actions", "ignore", "mappings", "actionProvider", "ae", "focusShouldFollow", "amount", "bindings")
 
   function manipulators(): Map<String, core.Action> = 
     defined().entries.toMap((entry) -> if (entry.value is String) entry.value else entry.value.key_code , (entry) -> actionProvider.apply(entry.key))
   function defined() = toMap().filter((key, val) -> !(ignore.contains(key) || val is Null)) + this.mappings.toMap()
   function rules() = if (manipulators().isEmpty) null else new core.SimLayer {trigger = modifier; maps = manipulators().toMapping()}.build().last
-  function build(parentModifier: (String | List<String>)?): karabiner.Rule? = 
+  function build(parentModifier: (String | List<String>)?): karabiner.Rule? =
     let (effectiveModifier = modifier ?? parentModifier)
     if (manipulators().isEmpty || effectiveModifier == null) null
+    else if (effectiveModifier is List) new core.Layer {modifier = effectiveModifier; mappings = manipulators().toMapping()}.build().last
     else new core.SimLayer {trigger = effectiveModifier; maps = manipulators().toMapping()}.build().last
 }
 

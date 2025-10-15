@@ -22,27 +22,28 @@ open class YabaiMode {
     defined().entries.toMap((entry) -> if (entry.value is String) entry.value else entry.value.key_code , (entry) -> actionProvider.apply(entry.key))
   function defined() = toMap().filter((key, val) -> !(ignore.contains(key) || val is Null)) + this.mappings.toMap()
   function rules() = if (manipulators().isEmpty) null else new core.SimLayer {trigger = modifier; maps = manipulators().toMapping()}.build().last
-  function build(parentModifier: (String | List<String>)?): karabiner.Rule? = 
+  function build(parentModifier: (String | List<String>)?): karabiner.Rule? =
     let (effectiveModifier = modifier ?? parentModifier)
     if (manipulators().isEmpty || effectiveModifier == null) null
+    else if (effectiveModifier is List) new core.Layer {modifier = effectiveModifier; mappings = manipulators().toMapping()}.build().last
     else new core.SimLayer {trigger = effectiveModifier; maps = manipulators().toMapping()}.build().last
 }
 
 open class Sequential extends YabaiMode {
-  prev: String?
-  next: String?
-  recent: String?
-  first: String?
-  last: String?
+  prev: core.UserInput?
+  next: core.UserInput?
+  recent: core.UserInput?
+  first: core.UserInput?
+  last: core.UserInput?
 }
 
 open class Directional extends YabaiMode {
-  east: String?
-  west: String?
-  north: String?
-  south: String?
-  prev: String?
-  next: String?
+  east: core.UserInput?
+  west: core.UserInput?
+  north: core.UserInput?
+  south: core.UserInput?
+  prev: core.UserInput?
+  next: core.UserInput?
 }
 
 open class DirectionalAction extends Directional {
@@ -200,13 +201,11 @@ class Yabai {
   toggles: Toggles?
   stack: Stack?
 
-  build: List<karabiner.Rule> = 
-    List(
-      window?.build(modifier),
-      space?.build(modifier),
-      display?.build(modifier),
-      toggles?.build(modifier),
-      stack?.build(modifier)
-    ).filterNonNull().flatten()
+  build: List<karabiner.Rule> =
+    (window?.build(modifier) ?? List()) +
+    (space?.build(modifier) ?? List()) +
+    (display?.build(modifier) ?? List()) +
+    (if (toggles?.build(modifier) == null) List() else List(toggles.build(modifier))) +
+    (stack?.build(modifier) ?? List())
 
 }
