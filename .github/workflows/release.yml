@@ -212,19 +212,44 @@ jobs:
       - name: Get version
         id: version
         run: |
-          # Parse version from release tag
           VERSION="${{ github.ref_name }}"
           if [[ "$VERSION" == "production" ]]; then
-            # If triggered from production branch, get the latest release
-            VERSION=$(curl -s https://api.github.com/repos/lrangell/karabiner-pkl/releases/latest | jq -r '.tag_name')
+            VERSION=$(curl -s https://api.github.com/repos/lrangell/ankura/releases/latest | jq -r '.tag_name')
           fi
           echo "VERSION=${VERSION#v}" >> $GITHUB_OUTPUT
           echo "TAG=$VERSION" >> $GITHUB_OUTPUT
 
+      - name: Download release artifacts
+        run: |
+          mkdir -p artifacts
+          cd artifacts
+
+          # Download the tarballs and checksums
+          curl -L -o "ankura-${{ steps.version.outputs.TAG }}-x86_64-apple-darwin.tar.gz" \
+            "https://github.com/lrangell/ankura/releases/download/${{ steps.version.outputs.TAG }}/ankura-${{ steps.version.outputs.TAG }}-x86_64-apple-darwin.tar.gz"
+
+          curl -L -o "ankura-${{ steps.version.outputs.TAG }}-aarch64-apple-darwin.tar.gz" \
+            "https://github.com/lrangell/ankura/releases/download/${{ steps.version.outputs.TAG }}/ankura-${{ steps.version.outputs.TAG }}-aarch64-apple-darwin.tar.gz"
+
+          curl -L -o "ankura-${{ steps.version.outputs.TAG }}-x86_64-apple-darwin.sha256" \
+            "https://github.com/lrangell/ankura/releases/download/${{ steps.version.outputs.TAG }}/ankura-${{ steps.version.outputs.TAG }}-x86_64-apple-darwin.sha256"
+
+          curl -L -o "ankura-${{ steps.version.outputs.TAG }}-aarch64-apple-darwin.sha256" \
+            "https://github.com/lrangell/ankura/releases/download/${{ steps.version.outputs.TAG }}/ankura-${{ steps.version.outputs.TAG }}-aarch64-apple-darwin.sha256"
+
+      - name: Extract checksums
+        id: checksums
+        run: |
+          X86_CHECKSUM=$(cat artifacts/ankura-${{ steps.version.outputs.TAG }}-x86_64-apple-darwin.sha256 | cut -d' ' -f1)
+          ARM_CHECKSUM=$(cat artifacts/ankura-${{ steps.version.outputs.TAG }}-aarch64-apple-darwin.sha256 | cut -d' ' -f1)
+
+          echo "x86_checksum=${X86_CHECKSUM}" >> $GITHUB_OUTPUT
+          echo "arm_checksum=${ARM_CHECKSUM}" >> $GITHUB_OUTPUT
+
       - name: Checkout tap repository
         uses: actions/checkout@v4
         with:
-          repository: lrangell/homebrew-karabiner-pkl
+          repository: lrangell/homebrew-ankura
           token: ${{ secrets.GH_PAT }}
           path: tap
           ref: main
@@ -232,33 +257,19 @@ jobs:
       - name: Update formula
         run: |
           cd tap
-          mkdir -p Formula
-          
-          cat > Formula/karabiner-pkl.rb << EOF
-          class KarabinerPkl < Formula
-            desc "Configuration tool for Karabiner-Elements using Pkl"
-            homepage "https://github.com/lrangell/karabiner-pkl"
-            url "https://github.com/lrangell/karabiner-pkl.git",
-                tag: "${{ steps.version.outputs.TAG }}",
-                revision: "${{ github.sha }}"
-            version "${{ steps.version.outputs.VERSION }}"
-            license "MIT"
-            
-            depends_on "rust" => :build
-            depends_on "pkl"
-            
-            def install
-              system "cargo", "install", "--locked", "--root", prefix, "--path", "."
-            end
-            
-            test do
-              system "#{bin}/karabiner-pkl", "--version"
-            end
-          end
-          EOF
-          
+
+          # Update version in formula
+          sed -i "s/version \".*\"/version \"${{ steps.version.outputs.VERSION }}\"/" Formula/ankura.rb
+
+          # Update Intel checksum (first occurrence)
+          sed -i "0,/sha256 \".*\"/{s/sha256 \".*\"/sha256 \"${{ steps.checksums.outputs.x86_checksum }}\"/}" Formula/ankura.rb
+
+          # Update ARM checksum (second occurrence)
+          awk -v arm="${{ steps.checksums.outputs.arm_checksum }}" '/sha256/ { count++; if (count == 2) { sub(/sha256 ".*"/, "sha256 \"" arm "\"") } } {print}' Formula/ankura.rb > Formula/ankura.rb.tmp
+          mv Formula/ankura.rb.tmp Formula/ankura.rb
+
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
-          git add Formula/karabiner-pkl.rb
-          git commit -m "Update karabiner-pkl to ${{ steps.version.outputs.VERSION }}"
+          git add Formula/ankura.rb
+          git commit -m "Update ankura to ${{ steps.version.outputs.VERSION }}"
           git push
