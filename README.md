@@ -1,15 +1,20 @@
-# ankura
+<p align="center">
+  <img width="75%" src="logo.png" alt="Banner">
+</p>
+<p align="center">
+  <b>Ankura</b>
+</p>
 
 A type-safe configuration tool for [Karabiner-Elements](https://karabiner-elements.pqrs.org/) using Apple's [Pkl](https://pkl-lang.org/) configuration language.
 
-ankura brings the power of [Pkl](https://pkl-lang.org/) to [Karabiner-Elements](https://karabiner-elements.pqrs.org/) configuration, allowing you to define keymaps in a declarative manner. [Pkl](https://pkl-lang.org/) provides autocomplete, type safety, validation, and excellent editor support that catches errors as you type. As a full programming language, Pkl lets you create your own abstractions and reusable patterns. You write simple, readable Pkl configurations that compile to Karabiner JSON. The live-reload daemon applies your changes instantly, making keyboard customization feel natural instead of painful.
+ankura brings the power of Pkl to Karabiner-Elements configuration, allowing you to define keymaps in a declarative manner. Pkl provides autocomplete, type safety, validation, and excellent editor support that catches errors as you type. As a full programming language, Pkl lets you create your own abstractions and reusable patterns. You write simple, readable Pkl configurations that compile to Karabiner JSON. The live-reload daemon applies your changes instantly, making keyboard customization feel natural instead of painful.
 
 **Features:**
 
-- **Type-safe declarative DSL** - Write keyboard configurations in [Pkl](https://pkl-lang.org/) with full type checking, validation, and IDE support instead of error-prone JSON
+- **Type-safe declarative DSL** - Write keyboard configurations in Pkl with full type checking, validation, documentation and editor support
 - **Built-in helpers for common patterns** - Pre-built abstractions for hyper keys, symbol layers, key swaps, and dual-use keys
 - **First-class macOS integrations** - Native support for popular window managers (yabai, AeroSpace) and system automation through shell commands
-- **Live-reload daemon** - File watching with instant configuration updates and desktop notifications when changes are applied
+- **Live-reload daemon** - File watching with instant configuration updates
 
 ## Table of Contents
 
@@ -27,7 +32,11 @@ ankura brings the power of [Pkl](https://pkl-lang.org/) to [Karabiner-Elements](
 ## Installation
 
 ```bash
-brew install lrangell/ankura
+# Install Karabiner-Elements if not already installed
+brew install --cask karabiner-elements
+
+# Install ankura
+brew install lrangell/ankura/ankura
 ```
 
 ## Usage
@@ -46,6 +55,17 @@ rules = List(
   // Your rules go here
 )
 ```
+
+### Getting Started with Pkl
+
+If you're new to Pkl, we recommend reading the [Pkl Language Reference](https://pkl-lang.org/main/current/language-reference/index.html) to understand the language fundamentals.
+
+For the best experience, add Pkl support to your editor:
+
+- **Neovim**: [pkl-neovim](https://github.com/apple/pkl-neovim)
+- **VSCode**: [Pkl extension installation guide](https://pkl-lang.org/vscode/current/installation.html)
+
+Editor support provides autocomplete, type checking, inline documentation, and error highlighting as you write your configurations.
 
 ### Layers
 
@@ -217,6 +237,8 @@ builtins.swapKeys(keys.tab, keys.escape)  // swap tab and escape
 builtins.swapSemicolon()                  // swap ; and :
 ```
 
+For a complete working example with all features, see [readme_examples_profile.pkl](./readme_examples_profile.pkl).
+
 ## Yabai Integration
 
 <details>
@@ -361,3 +383,7 @@ aerospace {
 ```
 
 </details>
+
+---
+
+Inspired by [GokuRakuJoudo](https://github.com/yqrashawn/GokuRakuJoudo)
