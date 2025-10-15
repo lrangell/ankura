@@ -1,6 +1,6 @@
 [package]
 name = "ankura"
-version = "0.3.0"
+version = "0.3.4"
 edition = "2021"
 authors = ["Lucas Rangel"]
 description = "Karabiner configuration using Apple Pkl language"

@@ -47,52 +47,11 @@ jobs:
           SCCACHE_GHA_ENABLED: "true"
           RUSTC_WRAPPER: "sccache"
 
-  test:
-    name: Test
-    needs: check
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [macos-latest]  # Apple Silicon only
-        
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      # NOTE: Pkl CLI tests are temporarily disabled; re-enable once fixtures are stable.
-
-      - name: Rust Cache
-        uses: Swatinem/rust-cache@v2
-        with:
-          prefix-key: "v0-rust-${{ matrix.os }}"
-
-      - name: Setup sccache
-        uses: mozilla-actions/sccache-action@v0.0.9
-
-      - name: Install cargo-nextest
-        uses: taiki-e/install-action@nextest
-
-      - name: Run Rust tests
-        run: cargo nextest run --all-features --locked
-        env:
-          SCCACHE_GHA_ENABLED: "true"
-          RUSTC_WRAPPER: "sccache"
-
   build:
     name: Build
     needs: check
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        include:
-          - os: macos-latest
-            target: aarch64-apple-darwin
-          - os: macos-latest
-            target: x86_64-apple-darwin
-            
+    runs-on: macos-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -100,30 +59,18 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.target }}
-
-      - name: Install Pkl
-        run: |
-          PKL_VERSION="0.28.2"
-          if [[ "${{ matrix.target }}" == "aarch64-apple-darwin" ]]; then
-            curl -L -o pkl https://github.com/apple/pkl/releases/download/${PKL_VERSION}/pkl-macos-aarch64
-          else
-            curl -L -o pkl https://github.com/apple/pkl/releases/download/${PKL_VERSION}/pkl-macos-amd64
-          fi
-          chmod +x pkl
-          sudo mv pkl /usr/local/bin/
-          pkl --version
+          targets: aarch64-apple-darwin
 
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
         with:
-          prefix-key: "v0-rust-${{ matrix.target }}"
+          prefix-key: "v0-rust-aarch64-apple-darwin"
 
       - name: Setup sccache
         uses: mozilla-actions/sccache-action@v0.0.9
 
       - name: Build
-        run: cargo build --release --locked --target ${{ matrix.target }}
+        run: cargo build --release --locked --target aarch64-apple-darwin
         env:
           SCCACHE_GHA_ENABLED: "true"
           RUSTC_WRAPPER: "sccache"
@@ -131,5 +78,5 @@ jobs:
 
       - name: Verify binary
         run: |
-          file target/${{ matrix.target }}/release/karabiner-pkl
-          target/${{ matrix.target }}/release/karabiner-pkl --version
+          file target/aarch64-apple-darwin/release/ankura
+          target/aarch64-apple-darwin/release/ankura --version
