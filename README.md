@@ -1,5 +1,5 @@
 <p align="center">
-  <img width="75%" src="logo.png" alt="Banner">
+  <img width="25%" src="logo.png" alt="Banner">
 </p>
 <p align="center">
   <b>Ankura</b>
@@ -7,7 +7,7 @@
 
 A type-safe configuration tool for [Karabiner-Elements](https://karabiner-elements.pqrs.org/) using Apple's [Pkl](https://pkl-lang.org/) configuration language.
 
-ankura brings the power of Pkl to Karabiner-Elements configuration, allowing you to define keymaps in a declarative manner. Pkl provides autocomplete, type safety, validation, and excellent editor support that catches errors as you type. As a full programming language, Pkl lets you create your own abstractions and reusable patterns. You write simple, readable Pkl configurations that compile to Karabiner JSON. The live-reload daemon applies your changes instantly, making keyboard customization feel natural instead of painful.
+Ankura brings the power of Pkl to Karabiner-Elements configuration, allowing you to define keymaps in a declarative manner. Pkl provides autocomplete, type safety, validation, and excellent editor support that catches errors as you type. As a full programming language, Pkl lets you create your own abstractions and reusable patterns. You write simple, readable Pkl configurations that compile to Karabiner JSON. The live-reload daemon applies your changes instantly.
 
 **Features:**
 
@@ -55,6 +55,8 @@ rules = List(
   // Your rules go here
 )
 ```
+
+Select "My Config" profile in the Karabiner menu bar icon.
 
 ### Getting Started with Pkl
 
